@@ -1,0 +1,28 @@
+# Configurações sensíveis
+deploy/config.env
+
+# Chaves de API e tokens
+tokens/
+
+# Arquivos de teste
+testes/
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Cache do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de backup
+*.bak
+*.backup
+
+# Variáveis de ambiente locais
+.env
+.env.local
+.env.*.local

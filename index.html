@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>☁️👜 aiClaudia</title>
+    <link rel="icon" type="image/png" href="img/favicon_aiclaudia.png">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="front/style.css?v=20250923a">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0SSHXB16EN"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-0SSHXB16EN');
+    </script>
+    
+    <script>
+        // Placeholders aleatórios
+        const placeholders = [
+            "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
+            "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
+            "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
+            "Confie na nuvem: aqui sua dúvida vira resposta.",
+            "Dependência digital? Deixe comigo, eu sou a aiClaudia."
+        ];
+        
+        // Escolher placeholder aleatório
+        const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
+    </script>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6">
+                <div class="main-container">
+                    <div class="text-center mb-4">
+                        <h1 class="title">
+                            ☁️👜 aiClaudia
+                        </h1>
+                    </div>
+                    
+                    <div class="input-section">
+                        <textarea 
+                            id="userInput" 
+                            class="form-control" 
+                            placeholder=""
+                            rows="4"
+                        ></textarea>
+                        <script>
+                            document.getElementById('userInput').placeholder = randomPlaceholder;
+                        </script>
+                        <button 
+                            id="sendButton" 
+                            class="btn btn-primary mt-3"
+                            onclick="sendToClaudia()"
+                        > consultar 
+                            <span class="material-icons">send</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">
+                        <span class="material-icons">psychology</span>
+                        Carregando...
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="claudiaResponse"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+           <script src="front/main.js?v=20250923e"></script>
+</body>
+</html>

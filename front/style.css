@@ -1,0 +1,222 @@
+/* ☁️👜 aiClaudia - Custom Styles */
+
+/* Color Palette */
+:root {
+    --preto: #070600;
+    --branco: #F7F7FF;
+    --vermelho1: #EA526F;
+    --rosa: #F72585;
+    --roxo: #7209B7;
+    --azulEscuro: #3A0CA3;
+    --azulMedio: #4361EE;
+    --azulClaro: #279AF1;
+    --ciano: #23B5D3;
+}
+
+/* Base Styles */
+body {
+    background: linear-gradient(135deg, var(--azulEscuro) 0%, var(--roxo) 50%, var(--rosa) 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--preto);
+}
+
+.main-container {
+    background: var(--branco);
+    border-radius: 20px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+/* Title */
+.title {
+    color: var(--azulEscuro);
+    font-weight: 700;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.title .material-icons {
+    font-size: 2.5rem;
+    vertical-align: middle;
+    margin: 0 0.5rem;
+    color: var(--rosa);
+}
+
+.subtitle {
+    color: var(--preto);
+    font-size: 1.1rem;
+    opacity: 0.8;
+    margin-bottom: 0;
+}
+
+/* Input Section */
+.input-section {
+    margin-top: 2rem;
+}
+
+.form-control {
+    border: 2px solid var(--azulClaro);
+    border-radius: 15px;
+    padding: 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: var(--branco);
+}
+
+.form-control:focus {
+    border-color: var(--rosa);
+    box-shadow: 0 0 0 0.2rem rgba(247, 37, 133, 0.25);
+    background: var(--branco);
+}
+
+.form-control::placeholder {
+    color: var(--preto) !important;
+    opacity: 0.7 !important;
+    font-style: italic;
+}
+
+/* Button */
+.btn-primary {
+    background: linear-gradient(45deg, var(--rosa), var(--roxo));
+    border: none;
+    border-radius: 25px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(247, 37, 133, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(45deg, var(--roxo), var(--azulEscuro));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(114, 9, 183, 0.4);
+}
+
+.btn-primary .material-icons {
+    vertical-align: middle;
+    margin-right: 0.5rem;
+}
+
+/* Modal */
+.modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    background: linear-gradient(45deg, var(--azulClaro), var(--ciano));
+    color: var(--branco);
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+}
+
+.modal-title .material-icons {
+    vertical-align: middle;
+    margin-right: 0.5rem;
+}
+
+.modal-body {
+    padding: 2rem;
+    background: var(--branco);
+}
+
+/* Response Styles */
+.response-title {
+    color: var(--azulEscuro);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.response-text {
+    color: var(--preto);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+/* Loading Animation */
+.loading {
+    text-align: center;
+    color: var(--rosa);
+}
+
+.loading .material-icons {
+    animation: spin 1s linear infinite;
+    font-size: 2rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .main-container {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .title {
+        font-size: 2rem;
+    }
+    
+    .title .material-icons {
+        font-size: 2rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-container {
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .title {
+        font-size: 1.8rem;
+    }
+    
+    .btn-primary {
+        width: 100%;
+        margin-top: 1rem;
+    }
+}
+
+/* Loading Animation */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 20px;
+}
+
+/* Remover qualquer spinner padrão */
+.spinner-border, .spinner-grow {
+    display: none !important;
+}
+
+.rainbow-arrows {
+    font-size: 1.5rem;
+    font-weight: bold;
+    animation: rainbow 2s linear infinite;
+}
+
+@keyframes rainbow {
+    0% { color: #ff0000; }
+    16% { color: #ff8000; }
+    33% { color: #ffff00; }
+    50% { color: #00ff00; }
+    66% { color: #0080ff; }
+    83% { color: #8000ff; }
+    100% { color: #ff0000; }
+}
