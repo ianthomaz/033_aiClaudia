@@ -9,6 +9,7 @@ services:
       - ../index.html:/usr/share/nginx/html/index.html:ro
       - ../front:/usr/share/nginx/html/front:ro
       - ../img:/usr/share/nginx/html/img:ro
+      - ../dashboard:/usr/share/nginx/html/dashboard:ro
     environment:
       - NGINX_HOST=${NGINX_HOST:-localhost}
     restart: unless-stopped
