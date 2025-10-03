@@ -13,6 +13,9 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="front/style.css?v=20250923a">
     
+    <!-- Clippy.js CSS -->
+    <link rel="stylesheet" href="front/lib/clippyjs/clippy.css">
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-0SSHXB16EN"></script>
     <script>
@@ -23,19 +26,6 @@
       gtag('config', 'G-0SSHXB16EN');
     </script>
     
-    <script>
-        // Placeholders aleatórios
-        const placeholders = [
-            "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
-            "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
-            "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
-            "Confie na nuvem: aqui sua dúvida vira resposta.",
-            "Dependência digital? Deixe comigo, eu sou a aiClaudia."
-        ];
-        
-        // Escolher placeholder aleatório
-        const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
-    </script>
 </head>
 <body>
     <div class="container-fluid">
@@ -46,6 +36,9 @@
                         <h1 class="title">
                             ☁️👜 aiClaudia
                         </h1>
+                        <p class="subtitle">
+                            Uma versão brasileira e satírica do iCloud, onde tudo cabe.
+                        </p>
                     </div>
                     
                     <div class="input-section">
@@ -55,9 +48,6 @@
                             placeholder=""
                             rows="4"
                         ></textarea>
-                        <script>
-                            document.getElementById('userInput').placeholder = randomPlaceholder;
-                        </script>
                         <button 
                             id="sendButton" 
                             class="btn btn-primary mt-3"
@@ -91,7 +81,11 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Clippy.js -->
+    <script src="front/lib/clippyjs/clippy.min.js"></script>
+
     <!-- Custom JS -->
-           <script src="front/main.js?v=20250923e"></script>
+    <script src="front/main.js?v=20250923e"></script>
 </body>
 </html>

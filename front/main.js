@@ -5,9 +5,28 @@ const RATE_LIMIT_KEY = 'aiclaudia_rate_limit';
 const MAX_REQUESTS = 3;
 const WINDOW_MINUTES = 3; // 3 minutos, mas texto mantém "5min"
 
+// Placeholders aleatórios
+const placeholders = [
+    "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
+    "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
+    "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
+    "Confie na nuvem: aqui sua dúvida vira resposta.",
+    "Dependência digital? Deixe comigo, eu sou a aiClaudia."
+];
+
+let clippyAgent;
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('☁️👜 aiClaudia');
+    setRandomPlaceholder();
+
+    // Load Clippy
+    clippy.load('Peedy', function(agent) {
+        clippyAgent = agent;
+        clippyAgent.show();
+        clippyAgent.speak('Saudações! Sou a aiClaudia, no corpo de um papagaio. Pode perguntar o que quiser!');
+    }, undefined, 'front/lib/clippyjs/agents/');
     
     // Add enter key support for textarea
     const textarea = document.getElementById('userInput');
@@ -28,19 +47,25 @@ function sendToClaudia() {
     
     if (!userMessage) {
         showAlert('Digite algo primeiro!', 'warning');
+        if (clippyAgent) clippyAgent.speak('Você precisa digitar algo para eu poder te ajudar!');
         return;
     }
     
     // Check rate limit
     if (!checkRateLimit()) {
-        showAlert('Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!', 'info');
+        const msg = 'Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!';
+        showAlert(msg, 'info');
+        if (clippyAgent) clippyAgent.speak(msg);
         return;
     }
     
     // Disable button and show loading
     button.disabled = true;
-    button.innerHTML = '<span class="material-icons">hourglass_empty</span> Processando...';
+    button.innerHTML = '<span class="material-icons">hourglass_empty</span> Consultando...';
     
+    // Animate Peedy while processing
+    if (clippyAgent) clippyAgent.animate();
+
     // Show modal with loading
     showModal();
     showLoading();
@@ -48,19 +73,32 @@ function sendToClaudia() {
     // Call API
     callAPI(userMessage)
         .then(response => {
+            let claudiaResponseText;
+            let claudiaResponseTitle = '<span class="material-icons">cloud_done</span> | aiClaudia';
+
             if (response.error) {
                 if (response.error === 'rate_limit_exceeded') {
-                    showResponse('Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!', 'Claudia Cansada');
+                    claudiaResponseText = 'Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!';
+                    claudiaResponseTitle = 'Claudia Cansada';
                 } else {
-                    showResponse('O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', 'de pernas pro ar!');
+                    claudiaResponseText = 'O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?';
+                    claudiaResponseTitle = 'De pernas pro ar!';
                 }
             } else {
-                showResponse(response.response, '<span class="material-icons">cloud_done</span> | aiClaudia');
+                claudiaResponseText = response.response;
             }
+
+            // Peedy speaks the response
+            if (clippyAgent) {
+                clippyAgent.speak(claudiaResponseText);
+            }
+            showResponse(claudiaResponseText, claudiaResponseTitle);
         })
         .catch(error => {
             console.error('Erro:', error);
-            showResponse('O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', 'de pernas pro ar!');
+            const errorMsg = 'O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?';
+            if (clippyAgent) clippyAgent.speak(errorMsg);
+            showResponse(errorMsg, 'De pernas pro ar!');
         })
         .finally(() => {
             // Re-enable button
@@ -125,7 +163,7 @@ function showLoading() {
             <span class="material-icons">card_travel</span>
             <div class="rainbow-arrows">> > > > ></div>
             <span class="material-icons">cloud</span>
-            <p>Processando...</p>
+            <p>Consultando...</p>
         </div>
     `;
 }
@@ -161,23 +199,19 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
+function setRandomPlaceholder() {
+    const input = document.getElementById('userInput');
+    if (input) {
+        const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
+        input.placeholder = randomPlaceholder;
+    }
+}
+
 function clearInputAndSetNewPlaceholder() {
     const input = document.getElementById('userInput');
     if (input) {
-        // Limpar o campo
         input.value = '';
-        
-        // Gerar novo placeholder aleatório
-        const placeholders = [
-            "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
-            "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
-            "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
-            "Confie na nuvem: aqui sua dúvida vira resposta.",
-            "Dependência digital? Deixe comigo, eu sou a aiClaudia."
-        ];
-        
-        const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
-        input.placeholder = randomPlaceholder;
+        setRandomPlaceholder();
     }
 }
 

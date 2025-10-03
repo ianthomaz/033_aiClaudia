@@ -139,21 +139,6 @@ body {
     margin-bottom: 0;
 }
 
-/* Loading Animation */
-.loading {
-    text-align: center;
-    color: var(--rosa);
-}
-
-.loading .material-icons {
-    animation: spin 1s linear infinite;
-    font-size: 2rem;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
