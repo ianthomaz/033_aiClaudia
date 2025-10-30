@@ -6,15 +6,16 @@
 --     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 -- );
 
--- Tabela de sessões (anotada para futuro uso)
--- CREATE TABLE sessions (
---     session_id SERIAL PRIMARY KEY,
---     user_id INTEGER REFERENCES users(user_id),
---     session_token VARCHAR(255) UNIQUE NOT NULL,
---     date_time_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---     expires_at TIMESTAMP NOT NULL,
---     is_active BOOLEAN DEFAULT TRUE
--- );
+-- Tabela de sessões - Mantém personalidade e contexto da conversa
+CREATE TABLE sessions (
+    session_id VARCHAR(255) PRIMARY KEY,  -- UUID gerado no backend
+    user_ip VARCHAR(45) NOT NULL,
+    current_personality VARCHAR(100) REFERENCES rndbase(category),  -- Persona atual
+    message_history JSONB DEFAULT '[]'::jsonb,  -- Últimas 3-5 mensagens
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
 
 -- Tabela de prompts para o Gemini (rndbase) - DEVE SER CRIADA PRIMEIRO
 CREATE TABLE rndbase (
@@ -28,6 +29,7 @@ CREATE TABLE rndbase (
 -- Tabela de requests (principal para testes)
 CREATE TABLE requests (
     request_id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) REFERENCES sessions(session_id),  -- Vincula à sessão
     user_ip VARCHAR(45) NOT NULL,
     original_msg TEXT NOT NULL,
     date_time_request TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

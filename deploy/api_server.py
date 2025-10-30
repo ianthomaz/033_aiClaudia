@@ -23,41 +23,46 @@ CORS(app)  # Permitir CORS para o frontend
 @app.route('/api/process-message', methods=['POST'])
 def process_message():
     """
-    Endpoint principal: processa mensagem do usuário
+    Endpoint principal: processa mensagem do usuário com suporte a sessões
     """
     try:
         data = request.get_json()
-        
+
         if not data or 'user_message' not in data:
             return jsonify({
                 'error': 'missing_user_message',
                 'message': 'Mensagem do usuário é obrigatória'
             }), 400
-        
+
         user_message = data['user_message'].strip()
-        
+
         if not user_message:
             return jsonify({
                 'error': 'empty_message',
                 'message': 'Mensagem não pode estar vazia'
             }), 400
-        
-        # Pegar IP do usuário (simplificado - em produção usar request.remote_addr)
+
+        # Pegar IP do usuário
         user_ip = request.remote_addr or '127.0.0.1'
-        
-        # Processar mensagem usando o backend
-        result = process_user_message(user_ip, user_message)
-        
+
+        # Pegar session_id se enviado pelo frontend
+        session_id = data.get('session_id', None)
+
+        # Processar mensagem usando o backend (com sessão)
+        result = process_user_message(user_ip, user_message, session_id)
+
         if 'error' in result:
             return jsonify(result), 400
-        
+
         return jsonify({
             'success': True,
+            'session_id': result['session_id'],
             'response': result['response'],
             'category': result['category'],
-            'platform_used': result['platform_used']
+            'platform_used': result['platform_used'],
+            'is_new_session': result.get('is_new_session', False)
         })
-        
+
     except Exception as e:
         print(f"❌ Erro no processamento: {e}")
         return jsonify({

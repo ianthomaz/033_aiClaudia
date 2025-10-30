@@ -4,6 +4,7 @@ import psycopg2
 import random
 import os
 import requests
+import uuid
 from datetime import datetime, timedelta
 
 def get_random_prompt():
@@ -73,6 +74,245 @@ def get_random_prompt():
         print(f"❌ Erro ao selecionar prompt: {e}")
         # Fallback: retornar prompt aleatório do JSON
         return random.choice(prompts)
+
+def create_session(user_ip, personality_category):
+    """
+    Cria nova sessão com personalidade escolhida
+    """
+    db_config = {
+        'host': 'database',
+        'port': 5432,
+        'database': os.getenv('DB_NAME', 'aiclaudia'),
+        'user': os.getenv('DB_USER', 'aiclaudia'),
+        'password': os.getenv('DB_PASSWORD')
+    }
+
+    try:
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Gerar UUID único
+        session_id = str(uuid.uuid4())
+
+        # Inserir sessão
+        cursor.execute("""
+            INSERT INTO sessions (session_id, user_ip, current_personality)
+            VALUES (%s, %s, %s)
+        """, (session_id, user_ip, personality_category))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return {
+            'success': True,
+            'session_id': session_id,
+            'personality': personality_category
+        }
+
+    except Exception as e:
+        print(f"❌ Erro ao criar sessão: {e}")
+        return {'success': False, 'error': str(e)}
+
+def get_session(session_id):
+    """
+    Recupera sessão existente
+    """
+    db_config = {
+        'host': 'database',
+        'port': 5432,
+        'database': os.getenv('DB_NAME', 'aiclaudia'),
+        'user': os.getenv('DB_USER', 'aiclaudia'),
+        'password': os.getenv('DB_PASSWORD')
+    }
+
+    try:
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Buscar sessão
+        cursor.execute("""
+            SELECT session_id, user_ip, current_personality, message_history,
+                   created_at, last_activity, is_active
+            FROM sessions
+            WHERE session_id = %s AND is_active = TRUE
+        """, (session_id,))
+
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if row:
+            return {
+                'success': True,
+                'session_id': row[0],
+                'user_ip': row[1],
+                'personality': row[2],
+                'message_history': row[3] or [],
+                'created_at': row[4],
+                'last_activity': row[5],
+                'is_active': row[6]
+            }
+        else:
+            return {'success': False, 'error': 'session_not_found'}
+
+    except Exception as e:
+        print(f"❌ Erro ao buscar sessão: {e}")
+        return {'success': False, 'error': str(e)}
+
+def update_session_activity(session_id):
+    """
+    Atualiza timestamp de última atividade da sessão
+    """
+    db_config = {
+        'host': 'database',
+        'port': 5432,
+        'database': os.getenv('DB_NAME', 'aiclaudia'),
+        'user': os.getenv('DB_USER', 'aiclaudia'),
+        'password': os.getenv('DB_PASSWORD')
+    }
+
+    try:
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE sessions
+            SET last_activity = NOW()
+            WHERE session_id = %s
+        """, (session_id,))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Erro ao atualizar atividade: {e}")
+        return False
+
+def add_message_to_history(session_id, user_msg, ai_response, max_messages=5):
+    """
+    Adiciona mensagem ao histórico da sessão (mantém últimas max_messages)
+    """
+    db_config = {
+        'host': 'database',
+        'port': 5432,
+        'database': os.getenv('DB_NAME', 'aiclaudia'),
+        'user': os.getenv('DB_USER', 'aiclaudia'),
+        'password': os.getenv('DB_PASSWORD')
+    }
+
+    try:
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Buscar histórico atual
+        cursor.execute("""
+            SELECT message_history FROM sessions WHERE session_id = %s
+        """, (session_id,))
+
+        row = cursor.fetchone()
+        history = row[0] if row and row[0] else []
+
+        # Adicionar nova mensagem
+        new_entry = {
+            'user': user_msg,
+            'assistant': ai_response,
+            'timestamp': datetime.now().isoformat()
+        }
+
+        history.append(new_entry)
+
+        # Manter apenas últimas max_messages
+        if len(history) > max_messages:
+            history = history[-max_messages:]
+
+        # Atualizar no banco
+        cursor.execute("""
+            UPDATE sessions
+            SET message_history = %s::jsonb
+            WHERE session_id = %s
+        """, (json.dumps(history), session_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Erro ao adicionar mensagem ao histórico: {e}")
+        return False
+
+def get_session_prompt(session_id, user_ip):
+    """
+    Pega prompt da sessão existente ou cria nova sessão com prompt aleatório
+    Retorna: (session_id, prompt_data, is_new_session)
+    """
+    # Tentar recuperar sessão existente
+    if session_id:
+        session = get_session(session_id)
+
+        if session['success']:
+            # Sessão existe - usar personalidade da sessão
+            personality = session['personality']
+
+            # Buscar conteúdo do prompt
+            db_config = {
+                'host': 'database',
+                'port': 5432,
+                'database': os.getenv('DB_NAME', 'aiclaudia'),
+                'user': os.getenv('DB_USER', 'aiclaudia'),
+                'password': os.getenv('DB_PASSWORD')
+            }
+
+            try:
+                conn = psycopg2.connect(**db_config)
+                cursor = conn.cursor()
+
+                cursor.execute("""
+                    SELECT category, content FROM rndbase WHERE category = %s
+                """, (personality,))
+
+                row = cursor.fetchone()
+                cursor.close()
+                conn.close()
+
+                if row:
+                    PREMISSA = "Você é aiClaudia, uma mulher com visão de esquerda, humanitária e inclusiva. Suas respostas devem adotar sempre uma perspectiva equitativa, evitando marcar gênero desnecessariamente. Quando houver termos de profissões ou papéis sociais, prefira a generalização ou a forma neutra por conceito, sem usar símbolos artificiais (como \"x\", \"@\" ou \"e\"). Suas respostas devem ter entre 24 e 300 caracteres."
+
+                    # Adicionar contexto da conversa
+                    context_str = ""
+                    if session['message_history']:
+                        context_str = "\n\nContexto da conversa anterior:\n"
+                        for msg in session['message_history'][-3:]:  # Últimas 3 mensagens
+                            context_str += f"Usuário: {msg['user']}\n"
+                            context_str += f"Você: {msg['assistant']}\n"
+
+                    return (
+                        session_id,
+                        {
+                            'category': row[0],
+                            'content': row[1],
+                            'full_prompt': f"{PREMISSA}\n\n{row[1]}{context_str}"
+                        },
+                        False  # não é nova sessão
+                    )
+
+            except Exception as e:
+                print(f"❌ Erro ao buscar prompt da sessão: {e}")
+
+    # Sessão não existe ou erro - criar nova
+    prompt_data = get_random_prompt()
+    new_session = create_session(user_ip, prompt_data['category'])
+
+    if new_session['success']:
+        return (new_session['session_id'], prompt_data, True)
+    else:
+        # Fallback: sem sessão
+        return (None, prompt_data, True)
 
 def get_usage_stats():
     """
@@ -322,7 +562,7 @@ def call_chatgpt_api(prompt, user_message):
             'platform': 'chatgpt'
         }
 
-def save_request_to_db(user_ip, user_message, prompt_category, ai_response, platform_used):
+def save_request_to_db(user_ip, user_message, prompt_category, ai_response, platform_used, session_id=None):
     """
     Salva request e resposta no BD
     """
@@ -333,33 +573,34 @@ def save_request_to_db(user_ip, user_message, prompt_category, ai_response, plat
         'user': os.getenv('DB_USER', 'aiclaudia'),
         'password': os.getenv('DB_PASSWORD')
     }
-    
+
     try:
         conn = psycopg2.connect(**db_config)
         cursor = conn.cursor()
-        
+
         cursor.execute("""
-            INSERT INTO requests (user_ip, original_msg, prompt_category, platform_used, ai_response, status)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (user_ip, user_message, prompt_category, platform_used, ai_response, 'completed'))
-        
+            INSERT INTO requests (session_id, user_ip, original_msg, prompt_category, platform_used, ai_response, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (session_id, user_ip, user_message, prompt_category, platform_used, ai_response, 'completed'))
+
         conn.commit()
         cursor.close()
         conn.close()
-        
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Erro ao salvar no BD: {e}")
         return False
 
-def process_user_message(user_ip, user_message, force_platform=None):
+def process_user_message(user_ip, user_message, session_id=None, force_platform=None):
     """
-    Processo completo: seleciona prompt, chama API (Gemini primeiro, ChatGPT fallback), salva no BD
-    
+    Processo completo: gerencia sessão, seleciona/mantém prompt, chama API, salva no BD
+
     Args:
         user_ip: IP do usuário
         user_message: Mensagem do usuário
+        session_id: ID da sessão (se existir)
         force_platform: 'gemini' ou 'chatgpt' para forçar uma plataforma específica
     """
     # 0. Verificar rate limit (proteção contra bombardeio)
@@ -370,16 +611,21 @@ def process_user_message(user_ip, user_message, force_platform=None):
             "message": rate_check['message'],
             "blocked_until": rate_check.get('blocked_until')
         }
-    
-    # 1. Selecionar prompt
-    prompt_data = get_random_prompt()
+
+    # 1. Gerenciar sessão e selecionar prompt
+    session_id, prompt_data, is_new_session = get_session_prompt(session_id, user_ip)
+
     if not prompt_data:
         return {"error": "Erro ao selecionar prompt"}
-    
-    # 2. Chamar API com fallback
+
+    # 2. Atualizar atividade da sessão
+    if session_id:
+        update_session_activity(session_id)
+
+    # 3. Chamar API com fallback
     ai_result = None
     platform_used = None
-    
+
     if force_platform == 'chatgpt':
         # Forçar ChatGPT
         ai_result = call_chatgpt_api(prompt_data['full_prompt'], user_message)
@@ -388,35 +634,43 @@ def process_user_message(user_ip, user_message, force_platform=None):
         # Tentar Gemini primeiro
         ai_result = call_gemini_api(prompt_data['full_prompt'], user_message)
         platform_used = 'gemini'
-        
+
         # Se Gemini falhar, tentar ChatGPT
         if not ai_result['success']:
             print(f"⚠️ Gemini falhou: {ai_result['error']}")
             print("🔄 Tentando ChatGPT como fallback...")
             ai_result = call_chatgpt_api(prompt_data['full_prompt'], user_message)
             platform_used = 'chatgpt'
-    
-    # 3. Verificar se alguma API funcionou
+
+    # 4. Verificar se alguma API funcionou
     if not ai_result['success']:
         return {
             "error": f"Ambas APIs falharam. Gemini: {ai_result.get('error', 'N/A')}",
             "category": prompt_data['category'],
-            "platform_attempted": platform_used
+            "platform_attempted": platform_used,
+            "session_id": session_id
         }
-    
-    # 4. Salvar no BD
+
+    # 5. Adicionar mensagem ao histórico da sessão
+    if session_id:
+        add_message_to_history(session_id, user_message, ai_result['response'])
+
+    # 6. Salvar no BD
     save_success = save_request_to_db(
-        user_ip, 
-        user_message, 
-        prompt_data['category'], 
-        ai_result['response'], 
-        platform_used
+        user_ip,
+        user_message,
+        prompt_data['category'],
+        ai_result['response'],
+        platform_used,
+        session_id
     )
-    
+
     return {
+        "session_id": session_id,
         "category": prompt_data['category'],
         "response": ai_result['response'],
         "platform_used": platform_used,
+        "is_new_session": is_new_session,
         "saved": save_success
     }
 
