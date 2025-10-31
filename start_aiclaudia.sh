@@ -61,11 +61,11 @@ success "Todas as variáveis obrigatórias estão definidas"
 # Parar containers existentes
 log "🛑 Parando containers existentes..."
 cd deploy
-docker compose -f 033_aiclaudia_dComposer.yml down 2>/dev/null || true
+docker-compose -f 033_aiclaudia_dComposer.yml down 2>/dev/null || true
 
 # Construir e iniciar containers
 log "🔨 Construindo e iniciando containers..."
-docker compose -f 033_aiclaudia_dComposer.yml up --build -d
+docker-compose -f 033_aiclaudia_dComposer.yml up --build -d
 
 # Aguardar serviços ficarem prontos
 log "⏳ Aguardando serviços ficarem prontos..."
@@ -142,7 +142,7 @@ fi
 
 # Status final
 log "📊 Status dos containers:"
-docker compose -f 033_aiclaudia_dComposer.yml ps
+docker-compose -f 033_aiclaudia_dComposer.yml ps
 
 echo ""
 success "🎉 ☁️👜 aiClaudia está rodando!"
@@ -152,7 +152,7 @@ echo "🔌 API: http://localhost:5000"
 echo "🗄️ Database: localhost:5433"
 echo ""
 echo "📝 Comandos úteis:"
-echo "  docker compose -f deploy/033_aiclaudia_dComposer.yml logs -f    # Ver logs"
-echo "  docker compose -f deploy/033_aiclaudia_dComposer.yml down       # Parar"
-echo "  docker compose -f deploy/033_aiclaudia_dComposer.yml restart    # Reiniciar"
+echo "  docker-compose -f deploy/033_aiclaudia_dComposer.yml logs -f    # Ver logs"
+echo "  docker-compose -f deploy/033_aiclaudia_dComposer.yml down       # Parar"
+echo "  docker-compose -f deploy/033_aiclaudia_dComposer.yml restart    # Reiniciar"
 echo ""

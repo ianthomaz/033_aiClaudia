@@ -10,6 +10,7 @@ services:
       - ../front:/usr/share/nginx/html/front:ro
       - ../img:/usr/share/nginx/html/img:ro
       - ../dashboard:/usr/share/nginx/html/dashboard:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     environment:
       - NGINX_HOST=${NGINX_HOST:-localhost}
     restart: unless-stopped
