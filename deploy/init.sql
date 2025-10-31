@@ -6,6 +6,15 @@
 --     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 -- );
 
+-- Tabela de prompts para o Gemini (rndbase) - DEVE SER CRIADA PRIMEIRO
+CREATE TABLE rndbase (
+    phrase_id SERIAL PRIMARY KEY,
+    category VARCHAR(100) UNIQUE NOT NULL,
+    content TEXT NOT NULL,
+    last_used TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tabela de sessões - Mantém personalidade e contexto da conversa
 CREATE TABLE sessions (
     session_id VARCHAR(255) PRIMARY KEY,  -- UUID gerado no backend
@@ -15,15 +24,6 @@ CREATE TABLE sessions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE
-);
-
--- Tabela de prompts para o Gemini (rndbase) - DEVE SER CRIADA PRIMEIRO
-CREATE TABLE rndbase (
-    phrase_id SERIAL PRIMARY KEY,
-    category VARCHAR(100) UNIQUE NOT NULL,
-    content TEXT NOT NULL,
-    last_used TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabela de requests (principal para testes)
