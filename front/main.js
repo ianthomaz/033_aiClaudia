@@ -8,9 +8,42 @@ const WINDOW_MINUTES = 3; // 3 minutos, mas texto mantém "5min"
 // Session management
 const SESSION_KEY = 'aiclaudia_session_id';
 
+// Claudia character positions and appearances
+const CLAUDIA_POSITIONS = [
+    'position-left',
+    'position-center',
+    'position-right',
+    'position-top-left',
+    'position-top-right',
+    'position-bottom-left',
+    'position-bottom-right'
+];
+
+const CLAUDIA_APPEARANCES = {
+    'default': '👩‍💻',
+    'gata_oraculo': '🐱',
+    'gata_rainha': '👑',
+    'gata_psicanalista': '😺',
+    'nuvem_preguicosa': '☁️',
+    'nuvem_guarda': '🌥️',
+    'coluna_editorial': '📰',
+    'horoscopo': '🔮',
+    'reporter_moda': '👗',
+    'coluna_querida_claudia': '💌',
+    'tired': '😴',
+    'thinking': '🤔',
+    'happy': '😊'
+};
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('☁️👜 aiClaudia');
+
+    // Posicionar Claudia inicialmente
+    moveClaudia();
+
+    // Mudar posição a cada 10 segundos
+    setInterval(moveClaudia, 10000);
     
     // Add enter key support for textarea
     const textarea = document.getElementById('userInput');
@@ -143,6 +176,11 @@ async function callAPI(userMessage) {
         }
     }
 
+    // Atualizar aparência da Claudia baseado na categoria
+    if (data.category) {
+        updateClaudiaAppearance(data.category);
+    }
+
     return data;
 }
 
@@ -219,6 +257,34 @@ function clearInputAndSetNewPlaceholder() {
 function resetSession() {
     clearSession();
     console.log('🔄 Sessão resetada! Próxima mensagem criará nova personalidade.');
+}
+
+// Mover Claudia para posição aleatória
+function moveClaudia() {
+    const character = document.getElementById('claudiaCharacter');
+    if (!character) return;
+
+    // Remover classes de posição antigas
+    CLAUDIA_POSITIONS.forEach(pos => character.classList.remove(pos));
+
+    // Adicionar posição aleatória
+    const randomPos = CLAUDIA_POSITIONS[Math.floor(Math.random() * CLAUDIA_POSITIONS.length)];
+    character.classList.add(randomPos);
+}
+
+// Atualizar aparência da Claudia baseado na personalidade
+function updateClaudiaAppearance(category) {
+    const character = document.getElementById('claudiaCharacter');
+    if (!character) return;
+
+    // Tentar encontrar emoji específico da categoria
+    let appearance = CLAUDIA_APPEARANCES[category] || CLAUDIA_APPEARANCES['default'];
+
+    // Atualizar emoji
+    character.textContent = appearance;
+
+    // Mover para nova posição
+    moveClaudia();
 }
 
 // TODO: Implementar random de cores de fundo (desenvolvimento futuro)

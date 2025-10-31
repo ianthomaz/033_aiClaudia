@@ -220,3 +220,66 @@ body {
     83% { color: #8000ff; }
     100% { color: #ff0000; }
 }
+
+/* Claudia Character Scene */
+.claudia-scene {
+    position: relative;
+    height: 200px;
+    background: linear-gradient(180deg, rgba(35, 181, 211, 0.1) 0%, rgba(247, 247, 255, 0.3) 100%);
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    border: 2px solid var(--ciano);
+}
+
+.claudia-character {
+    position: absolute;
+    font-size: 4rem;
+    transition: all 0.5s ease-in-out;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.claudia-character:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 6px 12px rgba(247, 37, 133, 0.4));
+}
+
+/* Posições predefinidas */
+.position-left {
+    left: 10%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.position-center {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.position-right {
+    left: 80%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.position-top-left {
+    left: 15%;
+    top: 20%;
+}
+
+.position-top-right {
+    left: 75%;
+    top: 20%;
+}
+
+.position-bottom-left {
+    left: 15%;
+    top: 70%;
+}
+
+.position-bottom-right {
+    left: 75%;
+    top: 70%;
+}
