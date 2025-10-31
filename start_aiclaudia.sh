@@ -75,8 +75,8 @@ sleep 10
 log "🧪 Executando testes de conectividade..."
 
 # Teste 1: Nginx (Frontend)
-log "Testando Nginx (porta 8081)..."
-if curl -s -f http://localhost:8081 > /dev/null; then
+log "Testando Nginx (porta 8082)..."
+if curl -s -f http://localhost:8082 > /dev/null; then
     success "✅ Nginx está respondendo"
 else
     error "❌ Nginx não está respondendo"
@@ -84,8 +84,8 @@ else
 fi
 
 # Teste 2: API Flask
-log "Testando API Flask (porta 5000)..."
-if curl -s -f http://localhost:5000/api/health > /dev/null; then
+log "Testando API Flask (porta 5001)..."
+if curl -s -f http://localhost:5001/api/health > /dev/null; then
     success "✅ API Flask está respondendo"
 else
     error "❌ API Flask não está respondendo"
@@ -103,7 +103,7 @@ fi
 
 # Teste 4: API Endpoint
 log "Testando endpoint /api/process-message..."
-response=$(curl -s -X POST http://localhost:5000/api/process-message \
+response=$(curl -s -X POST http://localhost:5001/api/process-message \
     -H "Content-Type: application/json" \
     -d '{"user_message": "teste"}' 2>/dev/null)
 
@@ -117,7 +117,7 @@ fi
 
 # Teste 5: API Endpoint /msgs
 log "Testando endpoint /api/msgs..."
-response=$(curl -s http://localhost:5000/api/msgs 2>/dev/null)
+response=$(curl -s http://localhost:5001/api/msgs 2>/dev/null)
 
 if echo "$response" | grep -q "success\|messages"; then
     success "✅ Endpoint /api/msgs está funcionando"
@@ -128,13 +128,13 @@ fi
 
 # Teste 6: Frontend carregando recursos
 log "Testando carregamento de recursos do frontend..."
-if curl -s -f http://localhost:8081/front/style.css > /dev/null; then
+if curl -s -f http://localhost:8082/front/style.css > /dev/null; then
     success "✅ CSS está sendo servido"
 else
     warning "⚠️ CSS não está sendo servido"
 fi
 
-if curl -s -f http://localhost:8081/front/main.js > /dev/null; then
+if curl -s -f http://localhost:8082/front/main.js > /dev/null; then
     success "✅ JavaScript está sendo servido"
 else
     warning "⚠️ JavaScript não está sendo servido"
@@ -147,9 +147,9 @@ docker-compose -f 033_aiclaudia_dComposer.yml ps
 echo ""
 success "🎉 ☁️👜 aiClaudia está rodando!"
 echo ""
-echo "🌐 Frontend: http://localhost:8081"
-echo "🔌 API: http://localhost:5000"
-echo "🗄️ Database: localhost:5433"
+echo "🌐 Frontend: http://localhost:8082"
+echo "🔌 API: http://localhost:5001"
+echo "🗄️ Database: localhost:5434"
 echo ""
 echo "📝 Comandos úteis:"
 echo "  docker-compose -f deploy/033_aiclaudia_dComposer.yml logs -f    # Ver logs"

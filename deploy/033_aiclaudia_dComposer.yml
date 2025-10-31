@@ -4,7 +4,7 @@ services:
     image: nginx:alpine
     container_name: aiclaudia
     ports:
-      - "8081:80"
+      - "8082:80"
     volumes:
       - ../index.html:/usr/share/nginx/html/index.html:ro
       - ../front:/usr/share/nginx/html/front:ro
@@ -21,7 +21,7 @@ services:
     build: .
     container_name: aiclaudia_api
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - .:/app/deploy:ro
       - ../front:/app/front:ro
@@ -43,7 +43,7 @@ services:
     image: postgres:15-alpine
     container_name: aiclaudia_db
     ports:
-      - "5433:5432"
+      - "5434:5432"
     environment:
       POSTGRES_DB: ${DB_NAME:-aiclaudia}
       POSTGRES_USER: ${DB_USER:-aiclaudia}
