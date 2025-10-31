@@ -5,9 +5,45 @@ const RATE_LIMIT_KEY = 'aiclaudia_rate_limit';
 const MAX_REQUESTS = 3;
 const WINDOW_MINUTES = 3; // 3 minutos, mas texto mantém "5min"
 
+// Session management
+const SESSION_KEY = 'aiclaudia_session_id';
+
+// Claudia character positions and appearances
+const CLAUDIA_POSITIONS = [
+    'position-left',
+    'position-center',
+    'position-right',
+    'position-top-left',
+    'position-top-right',
+    'position-bottom-left',
+    'position-bottom-right'
+];
+
+const CLAUDIA_APPEARANCES = {
+    'default': '👩‍💻',
+    'gata_oraculo': '🐱',
+    'gata_rainha': '👑',
+    'gata_psicanalista': '😺',
+    'nuvem_preguicosa': '☁️',
+    'nuvem_guarda': '🌥️',
+    'coluna_editorial': '📰',
+    'horoscopo': '🔮',
+    'reporter_moda': '👗',
+    'coluna_querida_claudia': '💌',
+    'tired': '😴',
+    'thinking': '🤔',
+    'happy': '😊'
+};
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('☁️👜 aiClaudia');
+
+    // Posicionar Claudia inicialmente
+    moveClaudia();
+
+    // Mudar posição a cada 10 segundos
+    setInterval(moveClaudia, 10000);
     
     // Add enter key support for textarea
     const textarea = document.getElementById('userInput');
@@ -75,42 +111,77 @@ function sendToClaudia() {
 function checkRateLimit() {
     const now = Date.now();
     const windowMs = WINDOW_MINUTES * 60 * 1000;
-    
+
     // Get stored data
     const stored = localStorage.getItem(RATE_LIMIT_KEY);
     let requests = stored ? JSON.parse(stored) : [];
-    
+
     // Remove old requests outside the window
     requests = requests.filter(time => now - time < windowMs);
-    
+
     // Check if limit exceeded
     if (requests.length >= MAX_REQUESTS) {
         return false;
     }
-    
+
     // Add current request
     requests.push(now);
     localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(requests));
-    
+
     return true;
 }
 
+// Session management functions
+function getSessionId() {
+    return localStorage.getItem(SESSION_KEY);
+}
+
+function setSessionId(sessionId) {
+    localStorage.setItem(SESSION_KEY, sessionId);
+}
+
+function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
+}
+
 async function callAPI(userMessage) {
+    // Pegar session_id do localStorage (se existir)
+    const sessionId = getSessionId();
+
     const response = await fetch('/api/process-message', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            user_message: userMessage
+            user_message: userMessage,
+            session_id: sessionId  // Enviar session_id se existir
         })
     });
-    
+
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
-    return await response.json();
+
+    const data = await response.json();
+
+    // Salvar session_id retornado pelo backend
+    if (data.session_id) {
+        setSessionId(data.session_id);
+
+        // Log no console se for nova sessão
+        if (data.is_new_session) {
+            console.log(`✨ Nova sessão criada: ${data.session_id}`);
+            console.log(`🎭 Personalidade: ${data.category}`);
+        }
+    }
+
+    // Atualizar aparência da Claudia baseado na categoria
+    if (data.category) {
+        updateClaudiaAppearance(data.category);
+    }
+
+    return data;
 }
 
 function showModal() {
@@ -179,6 +250,41 @@ function clearInputAndSetNewPlaceholder() {
         const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
         input.placeholder = randomPlaceholder;
     }
+}
+
+// Função para resetar sessão (disponível no console)
+// Para usuário avançado: digite resetSession() no console do navegador
+function resetSession() {
+    clearSession();
+    console.log('🔄 Sessão resetada! Próxima mensagem criará nova personalidade.');
+}
+
+// Mover Claudia para posição aleatória
+function moveClaudia() {
+    const character = document.getElementById('claudiaCharacter');
+    if (!character) return;
+
+    // Remover classes de posição antigas
+    CLAUDIA_POSITIONS.forEach(pos => character.classList.remove(pos));
+
+    // Adicionar posição aleatória
+    const randomPos = CLAUDIA_POSITIONS[Math.floor(Math.random() * CLAUDIA_POSITIONS.length)];
+    character.classList.add(randomPos);
+}
+
+// Atualizar aparência da Claudia baseado na personalidade
+function updateClaudiaAppearance(category) {
+    const character = document.getElementById('claudiaCharacter');
+    if (!character) return;
+
+    // Tentar encontrar emoji específico da categoria
+    let appearance = CLAUDIA_APPEARANCES[category] || CLAUDIA_APPEARANCES['default'];
+
+    // Atualizar emoji
+    character.textContent = appearance;
+
+    // Mover para nova posição
+    moveClaudia();
 }
 
 // TODO: Implementar random de cores de fundo (desenvolvimento futuro)
