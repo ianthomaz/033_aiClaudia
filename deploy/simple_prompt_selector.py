@@ -473,7 +473,8 @@ def call_gemini_api(prompt, user_message):
     Chama a API do Gemini com o prompt completo (versão simplificada)
     """
     api_key = os.getenv('GEMINI_API_KEY')
-    url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}'
+    model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
+    url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}'
     
     # Montar prompt final
     final_prompt = f"{prompt}\n\nMensagem do Usuário: {user_message}"

@@ -1,5 +1,6 @@
 # Configurações sensíveis
 deploy/config.env
+deploy/env.prod
 
 # Chaves de API e tokens
 tokens/
