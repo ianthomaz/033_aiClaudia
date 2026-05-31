@@ -4,13 +4,16 @@
 #
 # Variáveis (vêm do deploy/config.env ou env.prod):
 #   LLM_API_URL   (default https://llm.webplace.cc)
-#   LLM_API_TOKEN (obrigatório — Bearer do projeto)
+#   LLM_API_TOKEN (obrigatório — Bearer global ou chave itcs_aiclaudia_…)
 #   LLM_PROJECT_ID (default aiclaudia)
 #
+# No mini62, se ai2tcs estiver em 127.0.0.1:28471, usa local para ingest (mesmo índice que llm.webplace.cc).
+# Forçar remoto: LLM_INGEST_FORCE_REMOTE=1
+#
 # Modos:
-#   ./rag/ingest_llm.sh            # 'sync': upload de cada rag/*.md + dispara o index (recomendado/idempotente)
+#   ./rag/ingest_llm.sh            # 'sync': upload de cada rag/*.md + dispara o index
 #   ./rag/ingest_llm.sh upload     # só envia os ficheiros (/ingest/upload)
-#   ./rag/ingest_llm.sh index      # só dispara /ingest (usa as 'sources' configuradas no projeto)
+#   ./rag/ingest_llm.sh index      # só dispara /ingest
 set -euo pipefail
 
 BASE="${LLM_API_URL:-https://llm.webplace.cc}"; BASE="${BASE%/}"
@@ -19,8 +22,14 @@ PROJECT="${LLM_PROJECT_ID:-aiclaudia}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-sync}"
 
-# curl que falha em HTTP >=400 (exit !=0) e mostra corpo curto.
-_post() {  # _post <args...>
+if [ "${LLM_INGEST_FORCE_REMOTE:-}" != "1" ] && curl -sf --max-time 3 "${BASE}/health" >/dev/null 2>&1; then
+  : # LLM_API_URL already reachable
+elif [ "${LLM_INGEST_FORCE_REMOTE:-}" != "1" ] && curl -sf --max-time 3 "http://127.0.0.1:28471/health" >/dev/null 2>&1; then
+  echo "ℹ️  ai2tcs local (127.0.0.1:28471) — ingest directo no mini62"
+  BASE="http://127.0.0.1:28471"
+fi
+
+_post() {
   local out code
   out="$(curl -sS -w $'\n%{http_code}' "$@")" || return 1
   code="${out##*$'\n'}"; out="${out%$'\n'*}"
@@ -31,15 +40,17 @@ _post() {  # _post <args...>
 do_upload() {
   local f rc=0
   for f in "$HERE"/0*_*.md; do
+    [ -f "$f" ] || continue
     echo "→ upload $(basename "$f")"
-    _post -X POST "${BASE}/ingest/upload" \
+    if ! _post -X POST "${BASE}/ingest/upload" \
       -H "Authorization: Bearer ${TOKEN}" \
       -F "project_id=${PROJECT}" \
-      -F "library_slug=${PROJECT}" \
       -F "subpath=rag/" \
-      -F "file=@${f};type=text/markdown" || rc=1
+      -F "file=@${f};type=text/markdown"; then
+      rc=1
+    fi
   done
-  return $rc
+  return "$rc"
 }
 
 do_index() {
@@ -57,4 +68,4 @@ case "$MODE" in
   *) echo "modo inválido: $MODE (use sync | upload | index)" >&2; exit 2 ;;
 esac
 
-echo "✅ ingest '${MODE}' concluído (projeto ${PROJECT}). Conferir no dashboard do portal."
+echo "✅ ingest '${MODE}' concluído (projeto ${PROJECT}, base ${BASE}). Conferir no dashboard do portal."
