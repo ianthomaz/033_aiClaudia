@@ -195,6 +195,14 @@ function escapeHtml(str) {
     return d.innerHTML;
 }
 
+/** Markdown leve para respostas da Claudia: **negrito**, *itálico*, quebras de linha. */
+function formatResponseText(str) {
+    let s = escapeHtml(str);
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    return s.replace(/\n/g, '<br>');
+}
+
 function nowTime() {
     return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -215,7 +223,7 @@ function appendClaudiaMessage(text, category) {
         <div class="avatar">${p.emoji}</div>
         <div class="bubble">
             <div class="persona">${escapeHtml(p.name)}</div>
-            <div class="response-text">${escapeHtml(text)}</div>
+            <div class="response-text">${formatResponseText(text)}</div>
             <span class="timestamp">${nowTime()}</span>
         </div>`;
     thread().appendChild(el);

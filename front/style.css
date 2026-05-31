@@ -306,7 +306,9 @@ body {
     color: var(--accent);
     margin-bottom: 0.22rem;
 }
-.response-text { color: var(--ink); }
+.response-text { color: var(--ink); line-height: 1.45; }
+.response-text strong { font-weight: 700; color: var(--ink); }
+.response-text em { font-style: italic; }
 .timestamp {
     display: block;
     font-size: 0.65rem;

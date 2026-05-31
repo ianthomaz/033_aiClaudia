@@ -10,10 +10,14 @@ from datetime import datetime, timedelta
 
 # Short prefix on every reply; long-form world-building is in rag/*.md for ai2tcs ingest.
 CORE_VOICE_PREFIX = (
-    "Voz desta paródia de serviço em nuvem (BR): esquerda, humanitarismo, inclusão linguística "
-    "(evita marcar género em papéis sociais sem necessidade; neutro por conceito, sem x/@/e artificiais). "
-    "Respostas entre 24 e 300 caracteres. Humor surreal; sem ódio nem incitação. "
-    "Se a recuperação (RAG) trouxer trechos sobre o universo do projeto, alinha-te a eles."
+    "Voz aiClaudia (BR): esquerda, humanitarismo, inclusão linguística "
+    "(evita marcar género em papéis sociais sem necessidade). "
+    "Responda DIRECTO à pergunta do usuário em 1–3 frases curtas (máx. ~280 caracteres). "
+    "Humor surreal/leve; sem ódio nem incitação. "
+    "PROIBIDO: meta-texto ('vamos tecer', 'a nuvem significa', listar rótulos do prompt, "
+    "enumerar palavras-chave, explicar o truque cénico). "
+    "Pode usar **negrito** Markdown em no máximo uma expressão. "
+    "Se o RAG trouxer trechos, use-os sem recitar literalmente."
 )
 
 
@@ -297,7 +301,7 @@ def get_session_prompt(session_id, user_ip):
                     context_str = ""
                     if session['message_history']:
                         context_str = "\n\nContexto da conversa anterior:\n"
-                        for msg in session['message_history'][-3:]:  # Últimas 3 mensagens
+                        for msg in session['message_history'][-2:]:  # últimas 2 trocas no system prompt
                             context_str += f"Usuário: {msg['user']}\n"
                             context_str += f"Você: {msg['assistant']}\n"
 
@@ -514,7 +518,7 @@ def call_itcs_llm_api(
             "platform": "itcs",
         }
 
-    model = (os.getenv("LLM_MODEL_ALIAS") or os.getenv("LLM_MODEL") or "smart").strip()
+    model = (os.getenv("LLM_MODEL_ALIAS") or os.getenv("LLM_MODEL") or "fast").strip()
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -530,8 +534,8 @@ def call_itcs_llm_api(
     if history:
         payload["history"] = history
 
-    poll_timeout = int(os.getenv("LLM_ASK_TIMEOUT_SECONDS", "120"))
-    poll_interval = float(os.getenv("LLM_ASK_POLL_INTERVAL", "0.8"))
+    poll_timeout = int(os.getenv("LLM_ASK_TIMEOUT_SECONDS", "90"))
+    poll_interval = float(os.getenv("LLM_ASK_POLL_INTERVAL", "0.35"))
 
     try:
         r = requests.post(f"{base}/ask", headers=headers, json=payload, timeout=60)
@@ -610,7 +614,7 @@ def _history_for_itcs(session_id: str | None) -> list[dict] | None:
     if not session.get("success") or not session.get("message_history"):
         return None
     turns: list[dict] = []
-    for msg in session["message_history"][-6:]:
+    for msg in session["message_history"][-4:]:
         turns.append({"role": "user", "text": msg.get("user", "")})
         turns.append({"role": "assistant", "text": msg.get("assistant", "")})
     return turns or None
