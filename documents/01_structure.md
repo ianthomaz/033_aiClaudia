@@ -1,120 +1,74 @@
-# Estrutura Técnica - aiClaudia
+# Estrutura técnica — aiClaudia
 
-## Arquitetura Geral
+## Arquitetura
 
-O projeto utiliza uma arquitetura de microserviços containerizados com Docker Compose, separando frontend, API e banco de dados.
+Docker Compose com três serviços: frontend (nginx estático), API Flask, PostgreSQL. Em produção, nginx **nativo** no BikeAnjoVM faz TLS e proxy para os containers.
 
-## Estrutura de Pastas
+## Estrutura de pastas
 
 ```
-aiclaudia/
-├── deploy/                 # Configurações e backend
+033_aiClaudia/
+├── deploy/                 # Backend, compose, nginx fragment prod
 │   ├── 033_aiclaudia_dComposer.yml
-│   ├── Dockerfile
-│   ├── config.env
-│   ├── init.sql
 │   ├── api_server.py
 │   ├── simple_prompt_selector.py
-│   ├── load_rndbase.py
-│   └── rndbase_prompts.json
-├── front/                  # Frontend
-│   ├── style.css
-│   └── main.js
-├── img/                    # Assets
-│   └── favicon_iclaudia.png
-├── tokens/                 # Chaves de API
-│   └── geminiKey.txt
-├── documents/              # Documentação
-├── index.html              # Página principal
-├── start_iclaudia.sh       # Script de inicialização
-└── stop_iclaudia.sh        # Script de parada
+│   ├── rndbase_prompts.json
+│   ├── aiclaudia.nginx.conf   # fragmento para /etc/nginx/conf.d/ no host
+│   └── env.prod.example
+├── front/                  # CSS, JS, Lottie
+├── dashboard/              # Admin simples (HTML)
+├── rag/                    # Corpus markdown para ingest ai2tcs
+├── documents/              # Documentação do projeto
+├── local-only/             # Utilitários locais (transcripts Cursor)
+├── index.html
+├── start_aiclaudia.sh      # local start | deploy remoto
+└── stop_aiclaudia.sh
 ```
 
-## Componentes Principais
+## Portas (local / prod host)
 
-### Frontend (Nginx)
-- **Porta**: 8081
-- **Tecnologia**: HTML, CSS, JavaScript, Bootstrap 5, Material Icons
-- **Funcionalidades**: Interface de consulta, rate limiting frontend, modal de respostas
+| Serviço | Local | Prod (BikeAnjoVM host) |
+|---------|-------|-------------------------|
+| Frontend nginx | 8082 | 8082 → nginx :443 |
+| API Flask | 5001 | 5001 |
+| PostgreSQL | 5434 | (interno compose) |
 
-### API (Flask)
-- **Porta**: 5000
-- **Tecnologia**: Python, Flask, Flask-CORS
-- **Endpoints**:
-  - `POST /api/process-message` - Processa mensagens do usuário
-  - `GET /api/msgs` - Lista mensagens do banco
-  - `POST /api/log-block` - Registra bloqueios de rate limit
-  - `GET /api/health` - Health check
+## API (Flask)
 
-### Banco de Dados (PostgreSQL)
-- **Porta**: 5433
-- **Tabelas**:
-  - `requests` - Registro de consultas
-  - `rndbase` - Prompts surrealistas
-  - `rate_limits` - Controle de rate limiting
-  - `ai_helpers` - Configuração das APIs
-  - `logs` - Logs do sistema
+- `POST /api/process-message` — mensagem do usuário (+ session_id)
+- `GET /api/msgs` — histórico
+- `POST /api/log-block` — rate limit frontend
+- `GET /api/health` — health check
 
-## Sistema de Prompts
+## Banco (PostgreSQL)
 
-### Premissas do Sistema
-- **Persona**: aiClaudia, mulher com visão humanitária e inclusiva
-- **Limite de caracteres**: 24-300 caracteres por resposta
-- **Dosimetria**: Evita repetir o último prompt usado
-- **Rate limiting**: 3 requests/3min (frontend), 10 requests/5min (backend)
-- **Fallback**: Gemini como principal, ChatGPT como backup
+Tabelas principais: `requests`, `rndbase`, `rate_limits`, `sessions`, `ai_helpers`, `logs`. Sessões: ver `documents/03_sessions_system.md`.
 
-### Categorias de Prompts
-- Nuvem preguiçosa, discurso heroico, haicai sistema
-- Assistente cansada, sermão épico, profecia mística
-- Slogan publicitário, herói cansado, carta poética
-- Motivacional absurdo, aiClaudia consciente, guardiã das nuvens
-- Auditório absurdo, diário secreto, entidade dissimulada
-- Revista editorial, horóscopo, dicas, moda, cartas
-- Tigresa oráculo, gata rainha, gata bugada, gata memes, felina psicanalista
+## Sistema de prompts
 
-## Integração com APIs
+- **Premissa curta** em código (`simple_prompt_selector.py`).
+- **Gênero aleatório** por sessão a partir de `rndbase_prompts.json` / tabela `rndbase`.
+- **Contexto**: últimas mensagens da sessão (JSONB).
+- **RAG longo**: ficheiros em `rag/` ingeridos no ai2tcs (`LLM_PROJECT_ID=aiclaudia`).
 
-### Gemini API
-- **Modelo**: gemini-2.0-flash
-- **Uso**: Principal para geração de respostas
-- **Configuração**: Via variável de ambiente
+## Provedores de IA
 
-### ChatGPT API
-- **Modelo**: gpt-3.5-turbo
-- **Uso**: Fallback quando Gemini falha
-- **Configuração**: Via variável de ambiente
+1. **ITCS / ai2tcs** (preferido): `LLM_API_URL`, `LLM_API_TOKEN`, `LLM_PROJECT_ID`.
+2. **Gemini** (`GEMINI_API_KEY`, `GEMINI_MODEL`) — fallback.
+3. **ChatGPT** (`CHATGPT_API_KEY`) — fallback.
 
-## Rate Limiting
+## Rate limiting
 
-### Frontend
-- **Método**: localStorage
-- **Limite**: 3 requests em 3 minutos
-- **Mensagem**: "Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!"
+- Frontend: localStorage, 3 req / 3 min.
+- Backend: PostgreSQL `rate_limits`, 10 req / 5 min.
 
-### Backend
-- **Método**: PostgreSQL
-- **Limite**: 10 requests em 5 minutos
-- **Tabela**: rate_limits
+## Exposição pública
 
-## Exposição Pública
+- Domínio: aiclaudia.com.br (Cloudflare Proxied).
+- Origem: BikeAnjoVM, nginx nativo + containers.
+- Deploy: `./start_aiclaudia.sh deploy` — detalhes em `documents/06_deploy_and_ops.md`.
 
-### Cloudflare Tunnel
-- **Domínio**: aiclaudia.com.br, www.aiclaudia.com.br
-- **Rotas**:
-  - `/api/*` → API Flask (porta 5000)
-  - `/*` → Frontend Nginx (porta 8081)
+## Scripts
 
-## Scripts de Gerenciamento
-
-### start_iclaudia.sh
-- Carrega variáveis de ambiente
-- Para containers existentes
-- Constrói e inicia containers
-- Executa testes de conectividade
-- Valida todos os endpoints
-
-### stop_iclaudia.sh
-- Para e remove containers
-- Remove volumes e redes
-- Limpeza completa do ambiente
+- `start_aiclaudia.sh` — local ou `deploy` via SSH/rsync.
+- `stop_aiclaudia.sh` — para containers locais.

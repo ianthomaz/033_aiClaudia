@@ -1,4 +1,4 @@
-# Dados de sessão/env - usamos start_iclaudia.sh para carregar variáveis
+# Env loaded via start_aiclaudia.sh (deploy/config.env or deploy/env.prod)
 services:
   aiclaudia:
     image: nginx:alpine
@@ -21,7 +21,7 @@ services:
     build: .
     container_name: aiclaudia_api
     ports:
-      - "5001:5000"
+      - "${API_HOST_PORT:-5001}:5000"
     volumes:
       - .:/app/deploy:ro
       - ../front:/app/front:ro
@@ -32,6 +32,12 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
       - CHATGPT_API_KEY=${CHATGPT_API_KEY}
+      - LLM_API_URL=${LLM_API_URL:-}
+      - LLM_API_TOKEN=${LLM_API_TOKEN:-}
+      - LLM_PROJECT_ID=${LLM_PROJECT_ID:-}
+      - LLM_MODEL_ALIAS=${LLM_MODEL_ALIAS:-}
+      - LLM_ASK_TIMEOUT_SECONDS=${LLM_ASK_TIMEOUT_SECONDS:-120}
+      - LLM_ASK_POLL_INTERVAL=${LLM_ASK_POLL_INTERVAL:-0.8}
       - API_PORT=5000
       - FLASK_DEBUG=${FLASK_DEBUG:-False}
     depends_on:

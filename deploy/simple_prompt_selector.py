@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 import json
-import psycopg2
-import random
 import os
+import random
+import shlex
+import psycopg2
 import requests
+import time
 import uuid
 from datetime import datetime, timedelta
+
+# Short prefix on every reply; long-form world-building is in rag/*.md for ai2tcs ingest.
+CORE_VOICE_PREFIX = (
+    "Voz desta paródia de serviço em nuvem (BR): esquerda, humanitarismo, inclusão linguística "
+    "(evita marcar género em papéis sociais sem necessidade; neutro por conceito, sem x/@/e artificiais). "
+    "Respostas entre 24 e 300 caracteres. Humor surreal; sem ódio nem incitação. "
+    "Se a recuperação (RAG) trouxer trechos sobre o universo do projeto, alinha-te a eles."
+)
+
 
 def get_random_prompt():
     """
     Seleciona prompt aleatório usando JSON, evitando o último usado do BD
     """
-    # PREMISSA fixa
-    PREMISSA = "Você é aiClaudia, uma mulher com visão de esquerda, humanitária e inclusiva. Suas respostas devem adotar sempre uma perspectiva equitativa, evitando marcar gênero desnecessariamente. Quando houver termos de profissões ou papéis sociais, prefira a generalização ou a forma neutra por conceito, sem usar símbolos artificiais (como \"x\", \"@\" ou \"e\"). Suas respostas devem ter entre 24 e 300 caracteres."
     
     # Carregar prompts do JSON
     with open('/app/deploy/rndbase_prompts.json', 'r') as f:
@@ -61,8 +70,8 @@ def get_random_prompt():
         cursor.close()
         conn.close()
         
-        # Montar prompt completo com PREMISSA
-        full_prompt = f"{PREMISSA}\n\n{selected['content']}"
+        # Montar prompt completo com prefixo fixo + instrução de categoria
+        full_prompt = f"{CORE_VOICE_PREFIX}\n\n{selected['content']}"
         
         return {
             'category': selected['category'],
@@ -72,8 +81,12 @@ def get_random_prompt():
         
     except Exception as e:
         print(f"❌ Erro ao selecionar prompt: {e}")
-        # Fallback: retornar prompt aleatório do JSON
-        return random.choice(prompts)
+        p = random.choice(prompts)
+        return {
+            "category": p["category"],
+            "content": p["content"],
+            "full_prompt": f"{CORE_VOICE_PREFIX}\n\n{p['content']}",
+        }
 
 def create_session(user_ip, personality_category):
     """
@@ -281,8 +294,6 @@ def get_session_prompt(session_id, user_ip):
                 conn.close()
 
                 if row:
-                    PREMISSA = "Você é aiClaudia, uma mulher com visão de esquerda, humanitária e inclusiva. Suas respostas devem adotar sempre uma perspectiva equitativa, evitando marcar gênero desnecessariamente. Quando houver termos de profissões ou papéis sociais, prefira a generalização ou a forma neutra por conceito, sem usar símbolos artificiais (como \"x\", \"@\" ou \"e\"). Suas respostas devem ter entre 24 e 300 caracteres."
-
                     # Adicionar contexto da conversa
                     context_str = ""
                     if session['message_history']:
@@ -296,7 +307,7 @@ def get_session_prompt(session_id, user_ip):
                         {
                             'category': row[0],
                             'content': row[1],
-                            'full_prompt': f"{PREMISSA}\n\n{row[1]}{context_str}"
+                            'full_prompt': f"{CORE_VOICE_PREFIX}\n\n{row[1]}{context_str}"
                         },
                         False  # não é nova sessão
                     )
@@ -468,6 +479,158 @@ def check_rate_limit(user_ip, max_requests=10, window_minutes=5):
         print(f"❌ Erro ao verificar rate limit: {e}")
         return {'allowed': True}  # Em caso de erro, permitir
 
+
+def itcs_llm_configured() -> bool:
+    """True when ai2tcs / itcs-webplace LLM API (POST /ask) should be tried first."""
+    return bool(
+        os.getenv("LLM_API_URL", "").strip()
+        and os.getenv("LLM_API_TOKEN", "").strip()
+        and os.getenv("LLM_PROJECT_ID", "").strip()
+    )
+
+
+def commercial_llm_allowed() -> bool:
+    """Gemini/OpenAI only when not explicitly disabled (see LLM_DISABLE_COMMERCIAL)."""
+    v = os.getenv("LLM_DISABLE_COMMERCIAL", "").strip().lower()
+    return v not in ("1", "true", "yes", "on")
+
+
+def call_itcs_llm_api(
+    system_prompt: str,
+    user_message: str,
+    user_id: str | None = None,
+    history: list[dict] | None = None,
+):
+    """
+    Calls the ITCS-webplace LLM HTTP API (ai2tcs llm_api): POST /ask, poll /status, GET /result.
+    Contract: ai2tcs docs/02-api-integration.md; overview and doc index: docs/01-overview.md.
+    """
+    base = os.getenv("LLM_API_URL", "").strip().rstrip("/")
+    token = os.getenv("LLM_API_TOKEN", "").strip()
+    project_id = os.getenv("LLM_PROJECT_ID", "").strip()
+    if not base or not token or not project_id:
+        return {
+            "success": False,
+            "error": "LLM_API_URL, LLM_API_TOKEN, LLM_PROJECT_ID required for ITCS",
+            "platform": "itcs",
+        }
+
+    model = (os.getenv("LLM_MODEL_ALIAS") or os.getenv("LLM_MODEL") or "smart").strip()
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload: dict = {
+        "project_id": project_id,
+        "question": user_message,
+        "system_prompt": system_prompt,
+        "model": model,
+    }
+    if user_id:
+        payload["user_id"] = user_id
+    if history:
+        payload["history"] = history
+
+    # TEMP: remove after debugging — same request as requests.post below, for copy-paste in terminal.
+    _body = json.dumps(payload, ensure_ascii=False)
+    _curl = (
+        "curl -sS -X POST "
+        + shlex.quote(f"{base}/ask")
+        + " -H "
+        + shlex.quote(f"Authorization: Bearer {token}")
+        + " -H "
+        + shlex.quote("Content-Type: application/json")
+        + " -d "
+        + shlex.quote(_body)
+    )
+    print("[aiClaudia TEMP] ITCS /ask equivalent curl:\n" + _curl + "\n", flush=True)
+
+    poll_timeout = int(os.getenv("LLM_ASK_TIMEOUT_SECONDS", "120"))
+    poll_interval = float(os.getenv("LLM_ASK_POLL_INTERVAL", "0.8"))
+
+    try:
+        r = requests.post(f"{base}/ask", headers=headers, json=payload, timeout=60)
+        if r.status_code not in (200, 202):
+            return {
+                "success": False,
+                "error": f"ITCS /ask HTTP {r.status_code}: {r.text[:800]}",
+                "platform": "itcs",
+            }
+        body = r.json()
+        job_id = body.get("job_id")
+        if not job_id:
+            body_preview = repr(body)[:500]
+            return {
+                "success": False,
+                "error": f"ITCS /ask missing job_id: {body_preview}",
+                "platform": "itcs",
+            }
+
+        deadline = time.time() + poll_timeout
+        last_status: dict = {}
+        while time.time() < deadline:
+            sr = requests.get(f"{base}/status/{job_id}", headers=headers, timeout=30)
+            if sr.status_code != 200:
+                time.sleep(poll_interval)
+                continue
+            last_status = sr.json()
+            if last_status.get("client_status") != "processing":
+                break
+            time.sleep(poll_interval)
+        else:
+            return {
+                "success": False,
+                "error": "ITCS status poll timeout",
+                "platform": "itcs",
+            }
+
+        rr = requests.get(f"{base}/result/{job_id}", headers=headers, timeout=30)
+        if rr.status_code != 200:
+            return {
+                "success": False,
+                "error": f"ITCS /result HTTP {rr.status_code}: {rr.text[:800]}",
+                "platform": "itcs",
+            }
+        res = rr.json()
+        status = (res.get("status") or "").lower()
+        answer = (res.get("answer") or "").strip()
+
+        if status == "done" and answer:
+            return {"success": True, "response": answer, "platform": "itcs"}
+        if answer and status not in ("failed", "cancelled"):
+            return {"success": True, "response": answer, "platform": "itcs"}
+
+        poll_preview = repr(last_status)[:400]
+        return {
+            "success": False,
+            "error": (
+                f"ITCS job status={status!r} last_poll={poll_preview} "
+                f"answer_empty={not answer}"
+            ),
+            "platform": "itcs",
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"ITCS request error: {e}",
+            "platform": "itcs",
+        }
+
+
+def _history_for_itcs(session_id: str | None) -> list[dict] | None:
+    """Map session message_history to ITCS /ask history format."""
+    if not session_id:
+        return None
+    session = get_session(session_id)
+    if not session.get("success") or not session.get("message_history"):
+        return None
+    turns: list[dict] = []
+    for msg in session["message_history"][-6:]:
+        turns.append({"role": "user", "text": msg.get("user", "")})
+        turns.append({"role": "assistant", "text": msg.get("assistant", "")})
+    return turns or None
+
+
 def call_gemini_api(prompt, user_message):
     """
     Chama a API do Gemini com o prompt completo (versão simplificada)
@@ -602,7 +765,7 @@ def process_user_message(user_ip, user_message, session_id=None, force_platform=
         user_ip: IP do usuário
         user_message: Mensagem do usuário
         session_id: ID da sessão (se existir)
-        force_platform: 'gemini' ou 'chatgpt' para forçar uma plataforma específica
+        force_platform: 'itcs' | 'gemini' | 'chatgpt' to force one provider (commercial respect LLM_DISABLE_COMMERCIAL)
     """
     # 0. Verificar rate limit (proteção contra bombardeio)
     rate_check = check_rate_limit(user_ip)
@@ -623,33 +786,65 @@ def process_user_message(user_ip, user_message, session_id=None, force_platform=
     if session_id:
         update_session_activity(session_id)
 
-    # 3. Chamar API com fallback
+    # 3. LLM: ITCS only when LLM_* is set (no Gemini/GPT fallback). Commercial APIs only if ITCS is not configured.
     ai_result = None
     platform_used = None
+    user_ref = session_id or f"aiclaudia:{user_ip}"
+    hist = _history_for_itcs(session_id)
 
-    if force_platform == 'chatgpt':
-        # Forçar ChatGPT
-        ai_result = call_chatgpt_api(prompt_data['full_prompt'], user_message)
-        platform_used = 'chatgpt'
+    if force_platform == "itcs":
+        ai_result = call_itcs_llm_api(
+            prompt_data["full_prompt"], user_message, user_id=user_ref, history=hist
+        )
+        platform_used = "itcs"
+    elif force_platform == "chatgpt":
+        if not commercial_llm_allowed():
+            ai_result = {
+                "success": False,
+                "error": "Commercial LLM disabled (LLM_DISABLE_COMMERCIAL)",
+                "platform": "chatgpt",
+            }
+        else:
+            ai_result = call_chatgpt_api(prompt_data["full_prompt"], user_message)
+        platform_used = "chatgpt"
+    elif force_platform == "gemini":
+        if not commercial_llm_allowed():
+            ai_result = {
+                "success": False,
+                "error": "Commercial LLM disabled (LLM_DISABLE_COMMERCIAL)",
+                "platform": "gemini",
+            }
+        else:
+            ai_result = call_gemini_api(prompt_data["full_prompt"], user_message)
+        platform_used = "gemini"
+    elif itcs_llm_configured():
+        ai_result = call_itcs_llm_api(
+            prompt_data["full_prompt"], user_message, user_id=user_ref, history=hist
+        )
+        platform_used = "itcs"
+    elif not commercial_llm_allowed():
+        ai_result = {
+            "success": False,
+            "error": "Commercial LLM disabled; configure LLM_API_URL, LLM_API_TOKEN, LLM_PROJECT_ID for ITCS.",
+            "platform": "none",
+        }
+        platform_used = "none"
     else:
-        # Tentar Gemini primeiro
-        ai_result = call_gemini_api(prompt_data['full_prompt'], user_message)
-        platform_used = 'gemini'
-
-        # Se Gemini falhar, tentar ChatGPT
-        if not ai_result['success']:
+        ai_result = call_gemini_api(prompt_data["full_prompt"], user_message)
+        platform_used = "gemini"
+        if not ai_result["success"]:
             print(f"⚠️ Gemini falhou: {ai_result['error']}")
             print("🔄 Tentando ChatGPT como fallback...")
-            ai_result = call_chatgpt_api(prompt_data['full_prompt'], user_message)
-            platform_used = 'chatgpt'
+            ai_result = call_chatgpt_api(prompt_data["full_prompt"], user_message)
+            platform_used = "chatgpt"
 
     # 4. Verificar se alguma API funcionou
-    if not ai_result['success']:
+    if not ai_result["success"]:
         return {
-            "error": f"Ambas APIs falharam. Gemini: {ai_result.get('error', 'N/A')}",
-            "category": prompt_data['category'],
+            "error": ai_result.get("error", "All LLM backends failed"),
+            "category": prompt_data["category"],
             "platform_attempted": platform_used,
-            "session_id": session_id
+            "session_id": session_id,
         }
 
     # 5. Adicionar mensagem ao histórico da sessão
@@ -680,7 +875,7 @@ if __name__ == "__main__":
     user_msg = "Onde deixei minha chave de casa?"
     user_ip = "127.0.0.1"
     
-    print("🧪 Testando com Gemini (padrão):")
+    print("🧪 Testando LLM (ITCS se configurado, senão Gemini → ChatGPT):")
     result = process_user_message(user_ip, user_msg)
     
     if "error" not in result:

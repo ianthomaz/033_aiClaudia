@@ -1,43 +1,49 @@
-# ☁️👜 aiClaudia
+# aiClaudia
 
-Uma versão brasileira satírica do iCloud, onde a personagem Claudia tem um sistema de armazenamento onde tudo cabe. Um projeto experimental que combina humor, surrealismo e inteligência artificial.
+Versão brasileira satírica do iCloud: a Claudia guarda tudo na nuvem e responde com humor surreal e poético.
 
-## Sobre o Projeto
+Site público: **https://aiclaudia.com.br**
 
-O aiClaudia é um projeto que nasceu da ideia de criar uma versão brasileira e irreverente dos serviços de nuvem. A personagem Claudia representa uma assistente digital com personalidade única, que responde às consultas dos usuários de forma surreal e poética.
+## O que é
 
-### Características Principais
+- Interface simples (pergunta + resposta).
+- Personalidade fixa por sessão (26 “modos” no `rndbase`).
+- Rate limiting frontend e backend.
+- IA via ITCS/ai2tcs (RAG em `rag/`) ou fallback Gemini/ChatGPT.
 
-- **Interface simples**: Campo de texto + botão para consultas
-- **Respostas surreais**: IA processa mensagens com prompts criativos
-- **Rate limiting**: Controle de uso para evitar abuso
-- **Histórico**: Registro de todas as consultas no banco de dados
-- **Responsivo**: Design mobile-friendly com Bootstrap
+## Documentação
 
-## Como Usar
+| Ficheiro | Conteúdo |
+|----------|----------|
+| `documents/01_structure.md` | Arquitetura, portas, API, prompts |
+| `documents/02_roadmap.md` | Roadmap |
+| `documents/03_sessions_system.md` | Sessões e contexto |
+| `documents/06_deploy_and_ops.md` | Deploy prod (BikeAnjoVM) e local |
+| `rag/README.md` | Corpus para ingest ai2tcs |
 
-Acesse o site **www.aiclaudia.com.br** e interaja com a aiClaudia!
+## Quick start (local)
 
-Digite sua pergunta no campo de texto e receba uma resposta surreal e poética da nossa assistente digital.
+```bash
+cp deploy/env.prod.example deploy/config.env
+# editar DB_PASSWORD e chaves de IA
+./start_aiclaudia.sh
+# → http://localhost:8082
+```
 
-## Tecnologias
+## Deploy produção
 
-Para detalhes técnicos completos, consulte o arquivo `documents/01_structure.md`.
+```bash
+cp deploy/env.prod.example deploy/env.prod
+# preencher env.prod (SSH + secrets)
+./start_aiclaudia.sh deploy
+```
 
-## Roadmap
+Servidor: BikeAnjoVM (`/home/opc/033_aiClaudia`). Ver `documents/06_deploy_and_ops.md`.
 
-Veja o arquivo `documents/02_roadmap.md` para o plano de desenvolvimento.
+## Repositório
 
-## Contribuição
-
-Este é um projeto experimental e satírico. Contribuições são bem-vindas, mas mantenha o espírito humorístico e surreal do projeto.
-
-## Licença
-
-Creative Commons
+GitHub: `ianthomaz/033_aiClaudia`
 
 ---
 
-**Criado por:**
-Fernando Falcon & Ian Thomaz  
-coworkingsolution.com
+Criado por Fernando Falcon & Ian Thomaz — coworkingsolution.com

@@ -8,9 +8,12 @@
 - [x] Rate limiting frontend e backend
 - [x] Banco de dados PostgreSQL
 - [x] API Flask com endpoints funcionais
-- [x] Exposição pública via Cloudflare Tunnel
+- [x] Exposição pública (nginx + Cloudflare em aiclaudia.com.br, BikeAnjoVM)
 - [x] Sistema de logs e histórico
 - [x] Design responsivo com Bootstrap
+- [x] Sessões persistentes com personalidade fixa (`documents/03_sessions_system.md`)
+- [x] Deploy automatizado via `start_aiclaudia.sh deploy`
+- [x] Integração opcional ITCS LLM (ai2tcs) + corpus RAG (`rag/`)
 
 ## Próximas Funcionalidades
 
@@ -33,10 +36,10 @@
 - [ ] Otimizar carregamento de imagens
 
 ### 4. Incorporar Modo Chat
-- [ ] Criar interface de conversa contínua
-- [ ] Manter contexto entre mensagens
-- [ ] Implementar histórico de conversa
-- [ ] Adicionar opção de limpar conversa
+- [x] Manter contexto entre mensagens (sessões + histórico JSONB)
+- [ ] Interface de conversa contínua (UI tipo chat)
+- [ ] Botão visual “nova conversa” (hoje: `resetSession()` no console)
+- [ ] Adicionar opção de limpar conversa na UI
 
 ### 5. Permitir Autenticação de Usuário / Acesso a Histórico
 - [ ] Sistema de login/registro

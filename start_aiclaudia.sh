@@ -43,9 +43,16 @@ load_env() {
 
 # Variáveis obrigatórias para subir a aplicação
 check_required_env() {
-    for var in DB_PASSWORD GEMINI_API_KEY CHATGPT_API_KEY; do
+    if [ -z "${DB_PASSWORD}" ]; then
+        error "Variável DB_PASSWORD não está definida (deploy/config.env ou deploy/env.prod)."
+    fi
+    if [ -n "${LLM_API_URL:-}" ] && [ -n "${LLM_API_TOKEN:-}" ] && [ -n "${LLM_PROJECT_ID:-}" ]; then
+        success "LLM ITCS configurado (LLM_API_URL + LLM_API_TOKEN + LLM_PROJECT_ID); Gemini/ChatGPT ficam só como fallback."
+        return 0
+    fi
+    for var in GEMINI_API_KEY CHATGPT_API_KEY; do
         if [ -z "${!var}" ]; then
-            error "Variável $var não está definida (deploy/config.env ou deploy/env.prod)."
+            error "Variável $var não está definida. Ou defina ITCS (LLM_API_URL, LLM_API_TOKEN, LLM_PROJECT_ID) ou as chaves comerciais."
         fi
     done
 }
@@ -98,6 +105,12 @@ do_deploy() {
         echo "GEMINI_API_KEY=${GEMINI_API_KEY}"
         echo "GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}"
         echo "CHATGPT_API_KEY=${CHATGPT_API_KEY}"
+        echo "LLM_API_URL=${LLM_API_URL:-}"
+        echo "LLM_API_TOKEN=${LLM_API_TOKEN:-}"
+        echo "LLM_PROJECT_ID=${LLM_PROJECT_ID:-}"
+        echo "LLM_MODEL_ALIAS=${LLM_MODEL_ALIAS:-smart}"
+        echo "LLM_ASK_TIMEOUT_SECONDS=${LLM_ASK_TIMEOUT_SECONDS:-120}"
+        echo "LLM_ASK_POLL_INTERVAL=${LLM_ASK_POLL_INTERVAL:-0.8}"
         echo "NGINX_HOST=${NGINX_HOST:-www.aiclaudia.com.br}"
         echo "FLASK_DEBUG=${FLASK_DEBUG:-False}"
         echo "API_PORT=${API_PORT:-5000}"
@@ -123,6 +136,7 @@ do_start() {
     fi
     check_required_env
     success "Variáveis carregadas."
+    export API_HOST_PORT="${API_HOST_PORT:-5001}"
 
     log "Parando containers existentes..."
     (cd deploy && (docker compose -f 033_aiclaudia_dComposer.yml down 2>/dev/null || docker-compose -f 033_aiclaudia_dComposer.yml down 2>/dev/null)) || true
@@ -138,8 +152,8 @@ do_start() {
         error "Nginx (8082) não está respondendo."
     fi
     success "Nginx OK."
-    if ! curl -s -f http://localhost:5001/api/health > /dev/null; then
-        error "API (5001) não está respondendo."
+    if ! curl -s -f "http://localhost:${API_HOST_PORT}/api/health" > /dev/null; then
+        error "API (${API_HOST_PORT}) não está respondendo."
     fi
     success "API OK."
     if ! docker exec aiclaudia_db pg_isready -U aiclaudia -d aiclaudia > /dev/null 2>&1; then
@@ -147,7 +161,7 @@ do_start() {
     fi
     success "PostgreSQL OK."
 
-    response=$(curl -s -X POST http://localhost:5001/api/process-message -H "Content-Type: application/json" -d '{"user_message": "teste"}' 2>/dev/null)
+    response=$(curl -s -X POST "http://localhost:${API_HOST_PORT}/api/process-message" -H "Content-Type: application/json" -d '{"user_message": "teste"}' 2>/dev/null)
     if ! echo "$response" | grep -q "success\|error"; then
         warning "Endpoint /api/process-message inesperado: $response"
     else
@@ -158,7 +172,7 @@ do_start() {
     echo ""
     success "aiClaudia está rodando (local)."
     echo "  Frontend: http://localhost:8082"
-    echo "  API:      http://localhost:5001"
+    echo "  API:      http://localhost:${API_HOST_PORT}"
     echo "  DB:       localhost:5434"
 }
 
