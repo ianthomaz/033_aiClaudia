@@ -2,103 +2,81 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#3A0CA3">
+    <meta name="description" content="aiClaudia — a nuvem brasileira que guarda tudo e responde com humor surreal e poético.">
     <title>☁️👜 aiClaudia</title>
     <link rel="icon" type="image/png" href="img/favicon_aiclaudia.png">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="front/style.css?v=20250923a">
-    
+    <link rel="stylesheet" href="front/style.css?v=20260531b">
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-0SSHXB16EN"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-0SSHXB16EN');
-    </script>
-    
-    <script>
-        // Placeholders aleatórios
-        const placeholders = [
-            "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
-            "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
-            "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
-            "Confie na nuvem: aqui sua dúvida vira resposta.",
-            "Dependência digital? Deixe comigo, eu sou a aiClaudia."
-        ];
-        
-        // Escolher placeholder aleatório
-        const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
     </script>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-12 col-md-8 col-lg-6">
-                <div class="main-container">
-                    <div class="text-center mb-4">
-                        <h1 class="title">
-                            ☁️👜 aiClaudia
-                        </h1>
-                    </div>
-
-                    <!-- Claudia Character Area -->
-                    <div id="claudiaScene" class="claudia-scene">
-                        <div id="claudiaCharacter" class="claudia-character">
-                            👩‍💻
-                        </div>
-                    </div>
-
-                    <div class="input-section">
-                        <textarea 
-                            id="userInput" 
-                            class="form-control" 
-                            placeholder=""
-                            rows="4"
-                        ></textarea>
-                        <script>
-                            document.getElementById('userInput').placeholder = randomPlaceholder;
-                        </script>
-                        <button 
-                            id="sendButton" 
-                            class="btn btn-primary mt-3"
-                            onclick="sendToClaudia()"
-                        > consultar 
-                            <span class="material-icons">send</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Céu animado de fundo -->
+    <div class="sky" aria-hidden="true">
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+        <div class="cloud cloud-4"></div>
     </div>
 
-    <!-- Modal -->
-    <div id="modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">
-                        <span class="material-icons">psychology</span>
-                        Carregando...
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <main class="app">
+        <section class="chat-shell" id="chatShell">
+            <!-- Cabeçalho -->
+            <header class="chat-header">
+                <div class="brand">
+                    <h1 class="title">☁️👜 aiClaudia</h1>
+                    <p class="tagline">a nuvem que guarda tudo <span>(e às vezes esquece)</span></p>
                 </div>
-                <div class="modal-body">
-                    <div id="claudiaResponse"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+                <button id="newChatButton" class="icon-btn" type="button"
+                        onclick="startNewConversation()" title="Nova conversa (sorteia outro perfil)"
+                        aria-label="Nova conversa">
+                    <span class="material-icons-round">autorenew</span>
+                </button>
+            </header>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom JS -->
-           <script src="front/main.js?v=20250923e"></script>
+            <!-- Cena da personagem -->
+            <div id="claudiaScene" class="claudia-scene">
+                <span class="scene-cloud sc-1">☁️</span>
+                <span class="scene-cloud sc-2">☁️</span>
+                <div id="claudiaCharacter" class="claudia-character">👩‍💻</div>
+                <div id="personaBadge" class="persona-badge" hidden></div>
+            </div>
+
+            <!-- Thread de mensagens -->
+            <div id="chatThread" class="chat-thread" aria-live="polite" aria-label="Conversa"></div>
+
+            <!-- Sugestões iniciais -->
+            <div id="suggestions" class="suggestions"></div>
+
+            <!-- Barra de input -->
+            <div class="chat-input">
+                <textarea id="userInput" class="field" placeholder="" rows="1"
+                          aria-label="Sua mensagem" maxlength="500"></textarea>
+                <button id="sendButton" class="send-btn" onclick="sendToClaudia()"
+                        title="Enviar" aria-label="Enviar">
+                    <span class="material-icons-round">send</span>
+                </button>
+            </div>
+            <p class="footer-note">humor surreal • respostas curtas • <a href="#" onclick="showAbout(event)">sobre</a></p>
+        </section>
+    </main>
+
+    <script src="front/main.js?v=20260531b"></script>
 </body>
 </html>
