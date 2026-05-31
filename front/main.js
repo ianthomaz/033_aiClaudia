@@ -1,73 +1,94 @@
-// ☁️👜 aiClaudia - Main JavaScript (chat)
+// ☁️👜 aiClaudia — chat
 
-// Rate limiting (frontend)
+/* ---------- Config ---------- */
 const RATE_LIMIT_KEY = 'aiclaudia_rate_limit';
 const MAX_REQUESTS = 3;
-const WINDOW_MINUTES = 3; // 3 minutos, mas texto mantém "5min"
-
-// Session management
+const WINDOW_MINUTES = 3;
 const SESSION_KEY = 'aiclaudia_session_id';
 
-// Placeholders aleatórios (também usados ao limpar o input)
 const PLACEHOLDERS = [
-    "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
-    "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
-    "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
-    "Confie na nuvem: aqui sua dúvida vira resposta.",
-    "Dependência digital? Deixe comigo, eu sou a aiClaudia."
+    "Pergunta qualquer coisa pra nuvem…",
+    "Perdeu algo na memória? Conta pra mim.",
+    "Manda tua dúvida mais existencial.",
+    "O que tu quer descobrir hoje?",
+    "Fala comigo, eu guardo (quase) tudo."
 ];
 
-// Claudia character positions and appearances
-const CLAUDIA_POSITIONS = [
-    'position-left',
-    'position-center',
-    'position-right',
-    'position-top-left',
-    'position-top-right',
-    'position-bottom-left',
-    'position-bottom-right'
+const SUGGESTIONS = [
+    "Onde foi parar minha chave?",
+    "Me dá um conselho de vida",
+    "Como vai ser meu dia?",
+    "Por que eu esqueço as senhas?"
 ];
 
-const CLAUDIA_APPEARANCES = {
-    'default': '👩‍💻',
-    'gata_oraculo': '🐱',
-    'gata_rainha': '👑',
-    'gata_psicanalista': '😺',
-    'nuvem_preguicosa': '☁️',
-    'nuvem_guarda': '🌥️',
-    'coluna_editorial': '📰',
-    'horoscopo': '🔮',
-    'reporter_moda': '👗',
-    'coluna_querida_claudia': '💌',
-    'tired': '😴',
-    'thinking': '🤔',
-    'happy': '😊'
+/* ---------- Personas ----------
+ * Chaves em ASCII puro (sem ç/ã). A categoria vinda do backend é normalizada
+ * (sem acento, minúscula) antes da busca — assim "nuvem_preguiçosa" e
+ * "claudia_guardiã" casam mesmo vindo com acento, evitando bug de encoding.
+ */
+const PERSONAS = {
+    'default':              { name: 'aiClaudia',           emoji: '👩‍💻', accent: '#4361EE' },
+    'nuvem_preguicosa':     { name: 'Nuvem Preguiçosa',    emoji: '☁️',  accent: '#279AF1' },
+    'discurso_heroico':     { name: 'Discurso Heroico',    emoji: '🦸',  accent: '#4361EE' },
+    'haicai_sistema':       { name: 'Haicai do Sistema',   emoji: '🍃',  accent: '#23B5D3' },
+    'assistente_cansada':   { name: 'Assistente Cansada',  emoji: '😴',  accent: '#6a6385' },
+    'sermao_epico':         { name: 'Sermão Épico',        emoji: '📢',  accent: '#3A0CA3' },
+    'profecia_mistica':     { name: 'Profecia Mística',    emoji: '🔮',  accent: '#7209B7' },
+    'slogan_publicitario':  { name: 'Slogan Publicitário', emoji: '📣',  accent: '#EA526F' },
+    'heroi_cansado':        { name: 'Herói Cansado',       emoji: '🛡️',  accent: '#4361EE' },
+    'carta_poetica':        { name: 'Carta Poética',       emoji: '✉️',  accent: '#F72585' },
+    'motivacional_absurdo': { name: 'Motivacional Absurdo',emoji: '🌈',  accent: '#F72585' },
+    'icloudia_consciente':  { name: 'Nuvem Consciente',    emoji: '🌫️',  accent: '#279AF1' },
+    'claudia_guardia':      { name: 'Cláudia Guardiã',     emoji: '🌥️',  accent: '#23B5D3' },
+    'auditorio_absurdo':    { name: 'Auditório Absurdo',   emoji: '🎤',  accent: '#F72585' },
+    'diario_secreto':       { name: 'Diário Secreto',      emoji: '📔',  accent: '#7209B7' },
+    'entidade_dissimulada': { name: 'Entidade Dissimulada',emoji: '🌀',  accent: '#3A0CA3' },
+    'revista_editorial':    { name: 'Coluna Editorial',    emoji: '📰',  accent: '#3A0CA3' },
+    'revista_horoscopo':    { name: 'Horóscopo Surreal',   emoji: '🌙',  accent: '#7209B7' },
+    'revista_dicas':        { name: 'Dicas de Bem-Estar',  emoji: '💡',  accent: '#23B5D3' },
+    'revista_moda':         { name: 'Repórter de Moda',    emoji: '👗',  accent: '#EA526F' },
+    'revista_cartas':       { name: 'Cartas das Leitoras', emoji: '💌',  accent: '#F72585' },
+    'tigresa_oraculo':      { name: 'Tigresa-Oráculo',     emoji: '🐯',  accent: '#7209B7' },
+    'gata_rainha':          { name: 'Gata Rainha',         emoji: '👑',  accent: '#7209B7' },
+    'gata_bugada':          { name: 'Gata Bugada',         emoji: '🙀',  accent: '#EA526F' },
+    'gata_memes':           { name: 'Gata dos Memes',      emoji: '😹',  accent: '#F72585' },
+    'felina_psicanalista':  { name: 'Felina Psicanalista', emoji: '😼',  accent: '#4361EE' },
+    // estado auxiliar (erro/rate-limit)
+    'tired':                { name: 'Claudia Cansada',     emoji: '😴',  accent: '#6a6385' }
 };
 
-// Nome amigável da persona (rótulo do balão). Fallback: "aiClaudia".
-const CLAUDIA_PERSONA_NAMES = {
-    'gata_oraculo': 'Gata Oráculo',
-    'gata_rainha': 'Gata Rainha',
-    'gata_psicanalista': 'Gata Psicanalista',
-    'nuvem_preguicosa': 'Nuvem Preguiçosa',
-    'nuvem_guarda': 'Nuvem Guardiã',
-    'coluna_editorial': 'Coluna Editorial',
-    'horoscopo': 'Horóscopo Surreal',
-    'reporter_moda': 'Repórter de Moda',
-    'coluna_querida_claudia': 'Querida Cláudia'
-};
+// Normaliza a chave: tira acento, minúscula, espaços->_. Robusto a encoding.
+function normCat(cat) {
+    if (!cat) return 'default';
+    return String(cat)
+        .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove diacríticos
+        .toLowerCase().trim().replace(/\s+/g, '_');
+}
 
-// Initialize on page load
+function persona(cat) {
+    return PERSONAS[normCat(cat)] || PERSONAS.default;
+}
+
+const POSITIONS = [
+    'position-left', 'position-center', 'position-right',
+    'position-top-left', 'position-top-right',
+    'position-bottom-left', 'position-bottom-right'
+];
+
+let currentCategory = 'default';
+
+/* ---------- Init ---------- */
 document.addEventListener('DOMContentLoaded', function () {
     console.log('☁️👜 aiClaudia');
 
-    // Posicionar Claudia inicialmente e mudar a cada 10s
+    const character = document.getElementById('claudiaCharacter');
+    if (character) character.classList.add('bob');
     moveClaudia();
-    setInterval(moveClaudia, 10000);
+    setInterval(moveClaudia, 7000);
 
-    // Enter envia, Shift+Enter quebra linha; textarea cresce com o conteúdo
     const textarea = document.getElementById('userInput');
     if (textarea) {
+        textarea.placeholder = pick(PLACEHOLDERS);
         textarea.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -77,32 +98,27 @@ document.addEventListener('DOMContentLoaded', function () {
         textarea.addEventListener('input', autoGrow);
     }
 
-    // Saudação inicial da Claudia
+    renderSuggestions();
     greet();
 });
 
+/* ---------- Envio ---------- */
 function sendToClaudia() {
     const input = document.getElementById('userInput');
     const button = document.getElementById('sendButton');
     const userMessage = input.value.trim();
 
-    if (!userMessage) {
-        showAlert('Digite algo primeiro!', 'warning');
-        return;
-    }
-
-    // Check rate limit
+    if (!userMessage) { showToast('Escreve algo primeiro 😉'); return; }
     if (!checkRateLimit()) {
-        showAlert('Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!', 'info');
+        showToast('Tô cansada, tem nuvem no céu hoje não — volta daqui 5min!');
         return;
     }
 
-    // Mostra a mensagem do usuário no thread e limpa o input
+    clearSuggestions();
     appendUserMessage(userMessage);
     input.value = '';
     autoGrow.call(input);
 
-    // Desabilita botão e mostra "digitando..."
     button.disabled = true;
     const typingEl = appendTyping();
 
@@ -110,15 +126,15 @@ function sendToClaudia() {
         .then(response => {
             if (response.error) {
                 if (response.error === 'rate_limit_exceeded') {
-                    return { text: 'Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!', category: 'tired' };
+                    return { text: 'Tô cansada, tem nuvem no céu hoje não — volta daqui 5min!', category: 'tired' };
                 }
-                return { text: 'O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', category: null };
+                return { text: 'O céu aqui tá azul e sem nuvem; tô na sombra, lendo uma revista. Volta mais tarde?', category: 'tired' };
             }
             return { text: response.response, category: response.category };
         })
-        .catch(error => {
-            console.error('Erro:', error);
-            return { text: 'O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', category: null };
+        .catch(err => {
+            console.error('Erro:', err);
+            return { text: 'O céu aqui tá azul e sem nuvem; tô na sombra, lendo uma revista. Volta mais tarde?', category: 'tired' };
         })
         .then(({ text, category }) => {
             removeTyping(typingEl);
@@ -126,200 +142,214 @@ function sendToClaudia() {
         })
         .finally(() => {
             button.disabled = false;
-            // Novo placeholder aleatório
-            input.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
+            input.placeholder = pick(PLACEHOLDERS);
             input.focus();
         });
 }
 
+/* ---------- Rate limit ---------- */
 function checkRateLimit() {
     const now = Date.now();
     const windowMs = WINDOW_MINUTES * 60 * 1000;
-
-    const stored = localStorage.getItem(RATE_LIMIT_KEY);
-    let requests = stored ? JSON.parse(stored) : [];
-    requests = requests.filter(time => now - time < windowMs);
-
-    if (requests.length >= MAX_REQUESTS) {
-        return false;
-    }
-
+    let requests = JSON.parse(localStorage.getItem(RATE_LIMIT_KEY) || '[]');
+    requests = requests.filter(t => now - t < windowMs);
+    if (requests.length >= MAX_REQUESTS) return false;
     requests.push(now);
     localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(requests));
     return true;
 }
 
-// Session management functions
-function getSessionId() {
-    return localStorage.getItem(SESSION_KEY);
-}
-
-function setSessionId(sessionId) {
-    localStorage.setItem(SESSION_KEY, sessionId);
-}
-
-function clearSession() {
-    localStorage.removeItem(SESSION_KEY);
-}
+/* ---------- Sessão ---------- */
+const getSessionId = () => localStorage.getItem(SESSION_KEY);
+const setSessionId = (id) => localStorage.setItem(SESSION_KEY, id);
+const clearSession  = () => localStorage.removeItem(SESSION_KEY);
 
 async function callAPI(userMessage) {
     const sessionId = getSessionId();
-
     const response = await fetch('/api/process-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            user_message: userMessage,
-            session_id: sessionId
-        })
+        body: JSON.stringify({ user_message: userMessage, session_id: sessionId })
     });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
 
     if (data.session_id) {
         setSessionId(data.session_id);
-        if (data.is_new_session) {
-            console.log(`✨ Nova sessão criada: ${data.session_id}`);
-            console.log(`🎭 Personalidade: ${data.category}`);
+        if (data.is_new_session && data.category) {
+            revealPersona(data.category);
         }
     }
-
-    if (data.category) {
-        updateClaudiaAppearance(data.category);
-    }
-
+    if (data.category) applyPersona(data.category);
     return data;
 }
 
-/* ---------- Chat thread ---------- */
+/* ---------- Render ---------- */
+const thread = () => document.getElementById('chatThread');
+const scrollDown = () => { const t = thread(); if (t) t.scrollTop = t.scrollHeight; };
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function getThread() {
-    return document.getElementById('chatThread');
-}
-
-function scrollThreadToBottom() {
-    const thread = getThread();
-    if (thread) thread.scrollTop = thread.scrollHeight;
-}
-
-// Escapa HTML para não injetar markup vindo da resposta/usuário
 function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str == null ? '' : String(str);
-    return div.innerHTML;
+    const d = document.createElement('div');
+    d.textContent = str == null ? '' : String(str);
+    return d.innerHTML;
+}
+
+function nowTime() {
+    return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function appendUserMessage(text) {
-    const thread = getThread();
-    if (!thread) return;
-    const msg = document.createElement('div');
-    msg.className = 'chat-msg chat-msg-user';
-    msg.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
-    thread.appendChild(msg);
-    scrollThreadToBottom();
+    const el = document.createElement('div');
+    el.className = 'chat-msg chat-msg-user';
+    el.innerHTML = `<div class="bubble">${escapeHtml(text)}<span class="timestamp">${nowTime()}</span></div>`;
+    thread().appendChild(el);
+    scrollDown();
 }
 
 function appendClaudiaMessage(text, category) {
-    const thread = getThread();
-    if (!thread) return;
-    const avatar = CLAUDIA_APPEARANCES[category] || CLAUDIA_APPEARANCES['default'];
-    const name = CLAUDIA_PERSONA_NAMES[category] || 'aiClaudia';
-    const msg = document.createElement('div');
-    msg.className = 'chat-msg chat-msg-claudia';
-    msg.innerHTML = `
-        <div class="avatar">${avatar}</div>
+    const p = persona(category);
+    const el = document.createElement('div');
+    el.className = 'chat-msg chat-msg-claudia';
+    el.innerHTML = `
+        <div class="avatar">${p.emoji}</div>
         <div class="bubble">
-            <div class="persona">${escapeHtml(name)}</div>
+            <div class="persona">${escapeHtml(p.name)}</div>
             <div class="response-text">${escapeHtml(text)}</div>
-        </div>
-    `;
-    thread.appendChild(msg);
-    scrollThreadToBottom();
+            <span class="timestamp">${nowTime()}</span>
+        </div>`;
+    thread().appendChild(el);
+    scrollDown();
 }
 
 function appendTyping() {
-    const thread = getThread();
-    if (!thread) return null;
     const character = document.getElementById('claudiaCharacter');
-    const avatar = (character && character.textContent.trim()) || CLAUDIA_APPEARANCES['default'];
-    const msg = document.createElement('div');
-    msg.className = 'chat-msg chat-msg-claudia typing';
-    msg.innerHTML = `
-        <div class="avatar">${avatar}</div>
-        <div class="bubble">
-            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-        </div>
-    `;
-    thread.appendChild(msg);
-    scrollThreadToBottom();
-    return msg;
+    const avatar = (character && character.textContent.trim()) || persona(currentCategory).emoji;
+    const el = document.createElement('div');
+    el.className = 'chat-msg chat-msg-claudia typing';
+    el.innerHTML = `<div class="avatar">${avatar}</div>
+        <div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+    thread().appendChild(el);
+    scrollDown();
+    return el;
 }
 
-function removeTyping(el) {
-    if (el && el.parentNode) el.parentNode.removeChild(el);
+function removeTyping(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+
+function appendSystem(html) {
+    const el = document.createElement('div');
+    el.className = 'chat-system';
+    el.innerHTML = html;
+    thread().appendChild(el);
+    scrollDown();
 }
 
 function greet() {
     appendClaudiaMessage(
-        'Oi! Sou a nuvem que guarda tudo (e às vezes esquece). Manda tua dúvida aí que eu respondo no meu humor de hoje. ☁️',
+        'Oi! Sou a nuvem que guarda tudo (e às vezes esquece). Manda tua dúvida que eu respondo no meu humor de hoje. ☁️',
         'default'
     );
 }
 
+/* ---------- Sugestões ---------- */
+function renderSuggestions() {
+    const box = document.getElementById('suggestions');
+    if (!box) return;
+    box.innerHTML = '';
+    SUGGESTIONS.forEach(s => {
+        const b = document.createElement('button');
+        b.className = 'chip';
+        b.type = 'button';
+        b.textContent = s;
+        b.onclick = () => {
+            const input = document.getElementById('userInput');
+            input.value = s;
+            sendToClaudia();
+        };
+        box.appendChild(b);
+    });
+}
+function clearSuggestions() {
+    const box = document.getElementById('suggestions');
+    if (box) box.innerHTML = '';
+}
+
+/* ---------- Persona / tema ---------- */
+function applyPersona(category) {
+    currentCategory = category;
+    const p = persona(category);
+    document.documentElement.style.setProperty('--accent', p.accent);
+    document.documentElement.style.setProperty('--accent-soft', hexToSoft(p.accent, 0.13));
+    updateClaudiaAppearance(category);
+}
+
+function revealPersona(category) {
+    const p = persona(category);
+    appendSystem(`✨ hoje quem te atende: <b>${escapeHtml(p.name)}</b> ${p.emoji}`);
+    showPersonaBadge(p);
+}
+
+function showPersonaBadge(p) {
+    const badge = document.getElementById('personaBadge');
+    if (!badge) return;
+    badge.textContent = `${p.emoji} ${p.name}`;
+    badge.hidden = false;
+}
+
+function hexToSoft(hex, alpha) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/* ---------- Nova conversa ---------- */
 function startNewConversation() {
     clearSession();
-    const thread = getThread();
-    if (thread) thread.innerHTML = '';
-    const character = document.getElementById('claudiaCharacter');
-    if (character) character.textContent = CLAUDIA_APPEARANCES['default'];
-    console.log('🔄 Nova conversa — próxima mensagem cria um novo perfil.');
+    thread().innerHTML = '';
+    applyPersona('default');
+    const badge = document.getElementById('personaBadge');
+    if (badge) badge.hidden = true;
+    appendSystem('🔄 nova conversa — a próxima mensagem sorteia um perfil');
     greet();
+    renderSuggestions();
     const input = document.getElementById('userInput');
     if (input) input.focus();
 }
+function resetSession() { startNewConversation(); } // atalho de console
 
-function showAlert(message, type = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(alertDiv);
-    setTimeout(() => {
-        if (alertDiv.parentNode) alertDiv.remove();
-    }, 5000);
+/* ---------- Personagem ---------- */
+function moveClaudia() {
+    const c = document.getElementById('claudiaCharacter');
+    if (!c) return;
+    POSITIONS.forEach(pos => c.classList.remove(pos));
+    c.classList.add(pick(POSITIONS));
 }
 
-// textarea que cresce com o conteúdo (até um limite via CSS)
+function updateClaudiaAppearance(category) {
+    const c = document.getElementById('claudiaCharacter');
+    if (!c) return;
+    c.textContent = persona(category).emoji;
+    c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+    moveClaudia();
+}
+
+/* ---------- Util UI ---------- */
 function autoGrow() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 140) + 'px';
 }
 
-// Mantido para uso avançado no console
-function resetSession() {
-    startNewConversation();
+function showToast(message) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = message;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
 }
 
-/* ---------- Personagem (cena no topo) ---------- */
-
-function moveClaudia() {
-    const character = document.getElementById('claudiaCharacter');
-    if (!character) return;
-    CLAUDIA_POSITIONS.forEach(pos => character.classList.remove(pos));
-    const randomPos = CLAUDIA_POSITIONS[Math.floor(Math.random() * CLAUDIA_POSITIONS.length)];
-    character.classList.add(randomPos);
-}
-
-function updateClaudiaAppearance(category) {
-    const character = document.getElementById('claudiaCharacter');
-    if (!character) return;
-    character.textContent = CLAUDIA_APPEARANCES[category] || CLAUDIA_APPEARANCES['default'];
-    moveClaudia();
+function showAbout(e) {
+    if (e) e.preventDefault();
+    appendSystem('☁️ <b>aiClaudia</b> é uma paródia: a nuvem brasileira que guarda tudo e responde com humor surreal. Não é serviço real nem conselho profissional — é arte de boteco digital.');
 }
