@@ -3,7 +3,8 @@
 # aiClaudia - Start (local) ou Deploy (via SSH para BikeAnjoVM)
 # Uso:
 #   ./start_aiclaudia.sh           # inicia local (deploy/config.env ou deploy/env.prod)
-#   ./start_aiclaudia.sh deploy   # deploy remoto: sync, config, nginx, start no servidor
+#   ./start_aiclaudia.sh deploy   # deploy remoto: sync, config, nginx, ingest RAG, start no servidor
+#   ./start_aiclaudia.sh ingest   # só atualiza o corpus RAG no portal (llm.webplace.cc)
 
 set -e
 
@@ -47,7 +48,7 @@ check_required_env() {
         error "Variável DB_PASSWORD não está definida (deploy/config.env ou deploy/env.prod)."
     fi
     if [ -n "${LLM_API_URL:-}" ] && [ -n "${LLM_API_TOKEN:-}" ] && [ -n "${LLM_PROJECT_ID:-}" ]; then
-        success "LLM ITCS configurado (LLM_API_URL + LLM_API_TOKEN + LLM_PROJECT_ID); Gemini/ChatGPT ficam só como fallback."
+        success "LLM ITCS configurado (LLM_API_URL + LLM_API_TOKEN + LLM_PROJECT_ID); Claudia fala só pela tua LLM (llm.webplace.cc), sem Gemini/ChatGPT."
         return 0
     fi
     for var in GEMINI_API_KEY CHATGPT_API_KEY; do
@@ -55,6 +56,23 @@ check_required_env() {
             error "Variável $var não está definida. Ou defina ITCS (LLM_API_URL, LLM_API_TOKEN, LLM_PROJECT_ID) ou as chaves comerciais."
         fi
     done
+}
+
+# ---------- RAG ingest (LLM pessoal) ----------
+# Atualiza o corpus rag/ no portal (llm.webplace.cc). Não-fatal: um problema de RAG
+# não deve abortar o deploy/start da app.
+ingest_rag() {
+    if [ -z "${LLM_API_URL:-}" ] || [ -z "${LLM_API_TOKEN:-}" ] || [ -z "${LLM_PROJECT_ID:-}" ]; then
+        warning "RAG ingest pulado: defina LLM_API_URL + LLM_API_TOKEN + LLM_PROJECT_ID."
+        return 0
+    fi
+    log "Atualizando RAG no portal (${LLM_API_URL}, projeto ${LLM_PROJECT_ID})..."
+    if LLM_API_URL="$LLM_API_URL" LLM_API_TOKEN="$LLM_API_TOKEN" LLM_PROJECT_ID="$LLM_PROJECT_ID" \
+        bash rag/ingest_llm.sh "${RAG_INGEST_MODE:-sync}"; then
+        success "RAG ingerido/atualizado no portal."
+    else
+        warning "RAG ingest falhou (segue o fluxo; verifique o portal/token)."
+    fi
 }
 
 # ---------- Modo DEPLOY (via SSH) ----------
@@ -109,6 +127,7 @@ do_deploy() {
         echo "LLM_API_TOKEN=${LLM_API_TOKEN:-}"
         echo "LLM_PROJECT_ID=${LLM_PROJECT_ID:-}"
         echo "LLM_MODEL_ALIAS=${LLM_MODEL_ALIAS:-smart}"
+        echo "LLM_DISABLE_COMMERCIAL=${LLM_DISABLE_COMMERCIAL:-1}"
         echo "LLM_ASK_TIMEOUT_SECONDS=${LLM_ASK_TIMEOUT_SECONDS:-120}"
         echo "LLM_ASK_POLL_INTERVAL=${LLM_ASK_POLL_INTERVAL:-0.8}"
         echo "NGINX_HOST=${NGINX_HOST:-www.aiclaudia.com.br}"
@@ -121,6 +140,9 @@ do_deploy() {
     scp $SSH_OPTS deploy/aiclaudia.nginx.conf "${SSH_TARGET}:/tmp/aiclaudia.conf"
     ssh $SSH_OPTS "$SSH_TARGET" "sudo mv /tmp/aiclaudia.conf /etc/nginx/conf.d/aiclaudia.conf && sudo chown root:root /etc/nginx/conf.d/aiclaudia.conf && sudo chmod 644 /etc/nginx/conf.d/aiclaudia.conf && (sudo restorecon /etc/nginx/conf.d/aiclaudia.conf 2>/dev/null || sudo chcon -t httpd_config_t /etc/nginx/conf.d/aiclaudia.conf 2>/dev/null) && sudo nginx -t && sudo systemctl reload nginx" || warning "Nginx reload falhou (confira /etc/nginx/conf.d/aiclaudia.conf no servidor)."
     success "Nginx atualizado (arquivo aiclaudia.conf não é alterado pelo deploy BikeAnjo)."
+
+    # Atualiza o RAG no portal antes de subir a app (endpoint público; corre do host de deploy).
+    ingest_rag
 
     log "Iniciando aiClaudia no servidor..."
     ssh $SSH_OPTS "$SSH_TARGET" "cd ${DEPLOY_REMOTE_PATH} && ./start_aiclaudia.sh" || error "Falha ao rodar start no servidor."
@@ -177,8 +199,14 @@ do_start() {
 }
 
 # ---------- Main ----------
-if [ "${1:-}" = "deploy" ]; then
-    do_deploy
-else
-    do_start
-fi
+case "${1:-}" in
+    deploy) do_deploy ;;
+    ingest)
+        # Só atualiza o RAG no portal (sem subir containers). Ex.: ./start_aiclaudia.sh ingest
+        if ! load_env; then
+            error "Nenhum de: deploy/config.env ou deploy/env.prod encontrado."
+        fi
+        ingest_rag
+        ;;
+    *) do_start ;;
+esac

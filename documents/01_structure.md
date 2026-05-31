@@ -53,9 +53,8 @@ Tabelas principais: `requests`, `rndbase`, `rate_limits`, `sessions`, `ai_helper
 
 ## Provedores de IA
 
-1. **ITCS / ai2tcs** (preferido): `LLM_API_URL`, `LLM_API_TOKEN`, `LLM_PROJECT_ID`.
-2. **Gemini** (`GEMINI_API_KEY`, `GEMINI_MODEL`) — fallback.
-3. **ChatGPT** (`CHATGPT_API_KEY`) — fallback.
+1. **LLM pessoal — ITCS / ai2tcs** (única em produção): `LLM_API_URL=https://llm.webplace.cc`, `LLM_API_TOKEN`, `LLM_PROJECT_ID=aiclaudia`. Fluxo `POST /ask` → poll `GET /status/{job_id}` → `GET /result/{job_id}` (Bearer); `model` aceita `fast|smart|compact|reasoner`.
+2. **Gemini / ChatGPT** — desativados (`LLM_DISABLE_COMMERCIAL=1`); o código mantém o caminho só como contingência manual (`force_platform`).
 
 ## Rate limiting
 

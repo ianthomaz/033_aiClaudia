@@ -29,6 +29,10 @@ testes/
 .DS_Store
 Thumbs.db
 
+# Python
+__pycache__/
+*.pyc
+
 # Arquivos de backup
 *.bak
 *.backup

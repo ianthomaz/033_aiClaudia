@@ -9,7 +9,7 @@ Site público: **https://aiclaudia.com.br**
 - Interface simples (pergunta + resposta).
 - Personalidade fixa por sessão (26 “modos” no `rndbase`).
 - Rate limiting frontend e backend.
-- IA via ITCS/ai2tcs (RAG em `rag/`) ou fallback Gemini/ChatGPT.
+- IA **só** via LLM pessoal (ai2tcs/itcs em `llm.webplace.cc`, RAG em `rag/`); Gemini/ChatGPT desativados.
 
 ## Documentação
 
