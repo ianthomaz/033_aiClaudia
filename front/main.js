@@ -1,4 +1,4 @@
-// ☁️👜 aiClaudia - Main JavaScript
+// ☁️👜 aiClaudia - Main JavaScript (chat)
 
 // Rate limiting (frontend)
 const RATE_LIMIT_KEY = 'aiclaudia_rate_limit';
@@ -7,6 +7,15 @@ const WINDOW_MINUTES = 3; // 3 minutos, mas texto mantém "5min"
 
 // Session management
 const SESSION_KEY = 'aiclaudia_session_id';
+
+// Placeholders aleatórios (também usados ao limpar o input)
+const PLACEHOLDERS = [
+    "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
+    "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
+    "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
+    "Confie na nuvem: aqui sua dúvida vira resposta.",
+    "Dependência digital? Deixe comigo, eu sou a aiClaudia."
+];
 
 // Claudia character positions and appearances
 const CLAUDIA_POSITIONS = [
@@ -35,76 +44,91 @@ const CLAUDIA_APPEARANCES = {
     'happy': '😊'
 };
 
+// Nome amigável da persona (rótulo do balão). Fallback: "aiClaudia".
+const CLAUDIA_PERSONA_NAMES = {
+    'gata_oraculo': 'Gata Oráculo',
+    'gata_rainha': 'Gata Rainha',
+    'gata_psicanalista': 'Gata Psicanalista',
+    'nuvem_preguicosa': 'Nuvem Preguiçosa',
+    'nuvem_guarda': 'Nuvem Guardiã',
+    'coluna_editorial': 'Coluna Editorial',
+    'horoscopo': 'Horóscopo Surreal',
+    'reporter_moda': 'Repórter de Moda',
+    'coluna_querida_claudia': 'Querida Cláudia'
+};
+
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('☁️👜 aiClaudia');
 
-    // Posicionar Claudia inicialmente
+    // Posicionar Claudia inicialmente e mudar a cada 10s
     moveClaudia();
-
-    // Mudar posição a cada 10 segundos
     setInterval(moveClaudia, 10000);
-    
-    // Add enter key support for textarea
+
+    // Enter envia, Shift+Enter quebra linha; textarea cresce com o conteúdo
     const textarea = document.getElementById('userInput');
     if (textarea) {
-        textarea.addEventListener('keydown', function(e) {
+        textarea.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault(); // Previne quebra de linha
+                e.preventDefault();
                 sendToClaudia();
             }
         });
+        textarea.addEventListener('input', autoGrow);
     }
+
+    // Saudação inicial da Claudia
+    greet();
 });
 
 function sendToClaudia() {
     const input = document.getElementById('userInput');
     const button = document.getElementById('sendButton');
     const userMessage = input.value.trim();
-    
+
     if (!userMessage) {
         showAlert('Digite algo primeiro!', 'warning');
         return;
     }
-    
+
     // Check rate limit
     if (!checkRateLimit()) {
         showAlert('Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!', 'info');
         return;
     }
-    
-    // Disable button and show loading
+
+    // Mostra a mensagem do usuário no thread e limpa o input
+    appendUserMessage(userMessage);
+    input.value = '';
+    autoGrow.call(input);
+
+    // Desabilita botão e mostra "digitando..."
     button.disabled = true;
-    button.innerHTML = '<span class="material-icons">hourglass_empty</span> Processando...';
-    
-    // Show modal with loading
-    showModal();
-    showLoading();
-    
-    // Call API
+    const typingEl = appendTyping();
+
     callAPI(userMessage)
         .then(response => {
             if (response.error) {
                 if (response.error === 'rate_limit_exceeded') {
-                    showResponse('Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!', 'Claudia Cansada');
-                } else {
-                    showResponse('O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', 'de pernas pro ar!');
+                    return { text: 'Tô cansada, tem nuvem no céu hoje não, volta daqui 5min!', category: 'tired' };
                 }
-            } else {
-                showResponse(response.response, '<span class="material-icons">cloud_done</span> | aiClaudia');
+                return { text: 'O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', category: null };
             }
+            return { text: response.response, category: response.category };
         })
         .catch(error => {
             console.error('Erro:', error);
-            showResponse('O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', 'de pernas pro ar!');
+            return { text: 'O céu aqui tá azul e não tem nenhuma nuvem; tô na sombra, descansando e lendo uma revista. Volta mais tarde?', category: null };
+        })
+        .then(({ text, category }) => {
+            removeTyping(typingEl);
+            appendClaudiaMessage(text, category);
         })
         .finally(() => {
-            // Re-enable button
             button.disabled = false;
-            button.innerHTML = '<span class="material-icons">send</span> consultar';
-            
-            // Limpar campo e definir novo placeholder
-            clearInputAndSetNewPlaceholder();
+            // Novo placeholder aleatório
+            input.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
+            input.focus();
         });
 }
 
@@ -112,22 +136,16 @@ function checkRateLimit() {
     const now = Date.now();
     const windowMs = WINDOW_MINUTES * 60 * 1000;
 
-    // Get stored data
     const stored = localStorage.getItem(RATE_LIMIT_KEY);
     let requests = stored ? JSON.parse(stored) : [];
-
-    // Remove old requests outside the window
     requests = requests.filter(time => now - time < windowMs);
 
-    // Check if limit exceeded
     if (requests.length >= MAX_REQUESTS) {
         return false;
     }
 
-    // Add current request
     requests.push(now);
     localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(requests));
-
     return true;
 }
 
@@ -145,17 +163,14 @@ function clearSession() {
 }
 
 async function callAPI(userMessage) {
-    // Pegar session_id do localStorage (se existir)
     const sessionId = getSessionId();
 
     const response = await fetch('/api/process-message', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             user_message: userMessage,
-            session_id: sessionId  // Enviar session_id se existir
+            session_id: sessionId
         })
     });
 
@@ -165,18 +180,14 @@ async function callAPI(userMessage) {
 
     const data = await response.json();
 
-    // Salvar session_id retornado pelo backend
     if (data.session_id) {
         setSessionId(data.session_id);
-
-        // Log no console se for nova sessão
         if (data.is_new_session) {
             console.log(`✨ Nova sessão criada: ${data.session_id}`);
             console.log(`🎭 Personalidade: ${data.category}`);
         }
     }
 
-    // Atualizar aparência da Claudia baseado na categoria
     if (data.category) {
         updateClaudiaAppearance(data.category);
     }
@@ -184,36 +195,94 @@ async function callAPI(userMessage) {
     return data;
 }
 
-function showModal() {
-    const modal = new bootstrap.Modal(document.getElementById('modal'));
-    modal.show();
+/* ---------- Chat thread ---------- */
+
+function getThread() {
+    return document.getElementById('chatThread');
 }
 
-function showLoading() {
-    const responseDiv = document.getElementById('claudiaResponse');
-    responseDiv.innerHTML = `
-        <div class="loading">
-            <span class="material-icons">card_travel</span>
-            <div class="rainbow-arrows">> > > > ></div>
-            <span class="material-icons">cloud</span>
-            <p>Processando...</p>
+function scrollThreadToBottom() {
+    const thread = getThread();
+    if (thread) thread.scrollTop = thread.scrollHeight;
+}
+
+// Escapa HTML para não injetar markup vindo da resposta/usuário
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+}
+
+function appendUserMessage(text) {
+    const thread = getThread();
+    if (!thread) return;
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg chat-msg-user';
+    msg.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+    thread.appendChild(msg);
+    scrollThreadToBottom();
+}
+
+function appendClaudiaMessage(text, category) {
+    const thread = getThread();
+    if (!thread) return;
+    const avatar = CLAUDIA_APPEARANCES[category] || CLAUDIA_APPEARANCES['default'];
+    const name = CLAUDIA_PERSONA_NAMES[category] || 'aiClaudia';
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg chat-msg-claudia';
+    msg.innerHTML = `
+        <div class="avatar">${avatar}</div>
+        <div class="bubble">
+            <div class="persona">${escapeHtml(name)}</div>
+            <div class="response-text">${escapeHtml(text)}</div>
         </div>
     `;
+    thread.appendChild(msg);
+    scrollThreadToBottom();
 }
 
-function showResponse(responseText, title) {
-    const responseDiv = document.getElementById('claudiaResponse');
-    const modalTitle = document.getElementById('modalTitle');
-    
-    // Atualizar título do modal
-    modalTitle.innerHTML = title;
-    
-    // Mostrar apenas o texto da resposta
-    responseDiv.innerHTML = `<div class="response-text">${responseText}</div>`;
+function appendTyping() {
+    const thread = getThread();
+    if (!thread) return null;
+    const character = document.getElementById('claudiaCharacter');
+    const avatar = (character && character.textContent.trim()) || CLAUDIA_APPEARANCES['default'];
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg chat-msg-claudia typing';
+    msg.innerHTML = `
+        <div class="avatar">${avatar}</div>
+        <div class="bubble">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+    `;
+    thread.appendChild(msg);
+    scrollThreadToBottom();
+    return msg;
+}
+
+function removeTyping(el) {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+function greet() {
+    appendClaudiaMessage(
+        'Oi! Sou a nuvem que guarda tudo (e às vezes esquece). Manda tua dúvida aí que eu respondo no meu humor de hoje. ☁️',
+        'default'
+    );
+}
+
+function startNewConversation() {
+    clearSession();
+    const thread = getThread();
+    if (thread) thread.innerHTML = '';
+    const character = document.getElementById('claudiaCharacter');
+    if (character) character.textContent = CLAUDIA_APPEARANCES['default'];
+    console.log('🔄 Nova conversa — próxima mensagem cria um novo perfil.');
+    greet();
+    const input = document.getElementById('userInput');
+    if (input) input.focus();
 }
 
 function showAlert(message, type = 'info') {
-    // Create Bootstrap alert
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
     alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
@@ -221,71 +290,36 @@ function showAlert(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
     document.body.appendChild(alertDiv);
-    
-    // Auto remove after 5 seconds
     setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
+        if (alertDiv.parentNode) alertDiv.remove();
     }, 5000);
 }
 
-function clearInputAndSetNewPlaceholder() {
-    const input = document.getElementById('userInput');
-    if (input) {
-        // Limpar o campo
-        input.value = '';
-        
-        // Gerar novo placeholder aleatório
-        const placeholders = [
-            "Tá na dúvida? Eu sou a nuvem que guarda tudo. Pergunte qualquer coisa!",
-            "Perdeu na memória? A aiClaudia é seu achados e perdidos digital.",
-            "Precisa de ajuda? Eu sou sua assistente pessoal, pronta pra informar.",
-            "Confie na nuvem: aqui sua dúvida vira resposta.",
-            "Dependência digital? Deixe comigo, eu sou a aiClaudia."
-        ];
-        
-        const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
-        input.placeholder = randomPlaceholder;
-    }
+// textarea que cresce com o conteúdo (até um limite via CSS)
+function autoGrow() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 140) + 'px';
 }
 
-// Função para resetar sessão (disponível no console)
-// Para usuário avançado: digite resetSession() no console do navegador
+// Mantido para uso avançado no console
 function resetSession() {
-    clearSession();
-    console.log('🔄 Sessão resetada! Próxima mensagem criará nova personalidade.');
+    startNewConversation();
 }
 
-// Mover Claudia para posição aleatória
+/* ---------- Personagem (cena no topo) ---------- */
+
 function moveClaudia() {
     const character = document.getElementById('claudiaCharacter');
     if (!character) return;
-
-    // Remover classes de posição antigas
     CLAUDIA_POSITIONS.forEach(pos => character.classList.remove(pos));
-
-    // Adicionar posição aleatória
     const randomPos = CLAUDIA_POSITIONS[Math.floor(Math.random() * CLAUDIA_POSITIONS.length)];
     character.classList.add(randomPos);
 }
 
-// Atualizar aparência da Claudia baseado na personalidade
 function updateClaudiaAppearance(category) {
     const character = document.getElementById('claudiaCharacter');
     if (!character) return;
-
-    // Tentar encontrar emoji específico da categoria
-    let appearance = CLAUDIA_APPEARANCES[category] || CLAUDIA_APPEARANCES['default'];
-
-    // Atualizar emoji
-    character.textContent = appearance;
-
-    // Mover para nova posição
+    character.textContent = CLAUDIA_APPEARANCES[category] || CLAUDIA_APPEARANCES['default'];
     moveClaudia();
 }
-
-// TODO: Implementar random de cores de fundo (desenvolvimento futuro)
-// function randomizeBackground() { ... }

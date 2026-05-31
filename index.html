@@ -11,7 +11,7 @@
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="front/style.css?v=20250923a">
+    <link rel="stylesheet" href="front/style.css?v=20260531a">
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-0SSHXB16EN"></script>
@@ -41,11 +41,13 @@
     <div class="container-fluid">
         <div class="row justify-content-center">
             <div class="col-12 col-md-8 col-lg-6">
-                <div class="main-container">
-                    <div class="text-center mb-4">
-                        <h1 class="title">
-                            ☁️👜 aiClaudia
-                        </h1>
+                <div class="main-container chat-shell">
+                    <div class="chat-header">
+                        <h1 class="title">☁️👜 aiClaudia</h1>
+                        <button id="newChatButton" class="new-chat-btn" type="button"
+                                onclick="startNewConversation()" title="Nova conversa (novo perfil)">
+                            <span class="material-icons">refresh</span>
+                        </button>
                     </div>
 
                     <!-- Claudia Character Area -->
@@ -55,21 +57,26 @@
                         </div>
                     </div>
 
-                    <div class="input-section">
-                        <textarea 
-                            id="userInput" 
-                            class="form-control" 
+                    <!-- Chat thread -->
+                    <div id="chatThread" class="chat-thread" aria-live="polite"></div>
+
+                    <!-- Input (estilo chat) -->
+                    <div class="chat-input">
+                        <textarea
+                            id="userInput"
+                            class="form-control"
                             placeholder=""
-                            rows="4"
+                            rows="1"
                         ></textarea>
                         <script>
                             document.getElementById('userInput').placeholder = randomPlaceholder;
                         </script>
-                        <button 
-                            id="sendButton" 
-                            class="btn btn-primary mt-3"
+                        <button
+                            id="sendButton"
+                            class="btn btn-primary send-btn"
                             onclick="sendToClaudia()"
-                        > consultar 
+                            title="Enviar"
+                        >
                             <span class="material-icons">send</span>
                         </button>
                     </div>
@@ -78,27 +85,9 @@
         </div>
     </div>
 
-    <!-- Modal -->
-    <div id="modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">
-                        <span class="material-icons">psychology</span>
-                        Carregando...
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="claudiaResponse"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
-           <script src="front/main.js?v=20250923e"></script>
+           <script src="front/main.js?v=20260531a"></script>
 </body>
 </html>
