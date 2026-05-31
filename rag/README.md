@@ -11,10 +11,21 @@ Markdown sources for **ingest** into the ITCS LLM API (`project_id` e.g. `aiclau
 | `03_prompt_system.md` | Random category instructions + sessions (no code) |
 | `04_metaphors_and_lexicon.md` | Recurring metaphors (cloud, backup, “Cláudia”) |
 
-## ai2tcs
+## ai2tcs (portal pessoal — llm.webplace.cc)
 
-1. Point the project `sources` at this `rag/` directory (or a copy on the llm_server).
-2. Run `POST /ingest` (or your usual ingest pipeline).
-3. Set `rag_mode` for the project per ai2tcs docs when you want retrieval on every `/ask`.
+Projeto: `aiclaudia` (`LLM_PROJECT_ID`). Endpoint: `https://llm.webplace.cc`.
 
-The Flask app still sends a **short** `system_prompt` prefix + `question`; retrieved chunks add depth. Keep `rndbase_prompts.json` for the random “genre” line.
+1. Garantir que o projeto `aiclaudia` existe no portal (dashboard → novo projeto).
+2. Apontar as `sources` do projeto para este `rag/` (cópia no llm_server) **ou** usar o helper em modo upload.
+3. Ingerir o corpus:
+
+   ```bash
+   LLM_API_URL=https://llm.webplace.cc LLM_API_TOKEN=xxx LLM_PROJECT_ID=aiclaudia \
+     ./rag/ingest_llm.sh            # /ingest incremental (usa as sources do projeto)
+   # ou, se preferir enviar os ficheiros:
+   ./rag/ingest_llm.sh upload       # /ingest/upload de cada rag/*.md, depois rodar o ingest
+   ```
+
+4. Definir `rag_mode` do projeto (per docs ai2tcs) para ter recuperação em cada `/ask`.
+
+O Flask manda só um `system_prompt` **curto** + `question`; os trechos recuperados dão profundidade. `rndbase_prompts.json` continua a dar a linha de “género” aleatório.

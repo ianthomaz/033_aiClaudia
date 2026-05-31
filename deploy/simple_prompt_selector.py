@@ -2,7 +2,6 @@
 import json
 import os
 import random
-import shlex
 import psycopg2
 import requests
 import time
@@ -530,20 +529,6 @@ def call_itcs_llm_api(
         payload["user_id"] = user_id
     if history:
         payload["history"] = history
-
-    # TEMP: remove after debugging — same request as requests.post below, for copy-paste in terminal.
-    _body = json.dumps(payload, ensure_ascii=False)
-    _curl = (
-        "curl -sS -X POST "
-        + shlex.quote(f"{base}/ask")
-        + " -H "
-        + shlex.quote(f"Authorization: Bearer {token}")
-        + " -H "
-        + shlex.quote("Content-Type: application/json")
-        + " -d "
-        + shlex.quote(_body)
-    )
-    print("[aiClaudia TEMP] ITCS /ask equivalent curl:\n" + _curl + "\n", flush=True)
 
     poll_timeout = int(os.getenv("LLM_ASK_TIMEOUT_SECONDS", "120"))
     poll_interval = float(os.getenv("LLM_ASK_POLL_INTERVAL", "0.8"))

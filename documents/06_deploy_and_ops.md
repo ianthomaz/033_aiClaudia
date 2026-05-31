@@ -35,11 +35,13 @@ cp deploy/env.prod.example deploy/config.env   # ou env.prod
 
 URLs locais: frontend `http://localhost:8082`, API `http://localhost:5001`, Postgres `localhost:5434`.
 
-## LLM (ai2tcs)
+## LLM (ai2tcs — llm.webplace.cc)
 
-Com `LLM_API_URL` + `LLM_API_TOKEN` + `LLM_PROJECT_ID` definidos, a API usa só ITCS `/ask` (Gemini/ChatGPT ficam fallback ou bloqueados).
+Claudia fala **só** pela LLM pessoal: `LLM_API_URL=https://llm.webplace.cc`, `LLM_API_TOKEN`, `LLM_PROJECT_ID=aiclaudia`. Com o trio definido a API usa só ITCS `/ask`; `LLM_DISABLE_COMMERCIAL=1` bloqueia Gemini/ChatGPT mesmo sem token. Fluxo: `POST /ask` → poll `GET /status/{job_id}` → `GET /result/{job_id}` (Bearer).
 
-Corpus RAG para ingest: pasta `rag/` (ver `rag/README.md`). Projeto sugerido: `aiclaudia`.
+Health do portal: `curl -s https://llm.webplace.cc/health`.
+
+Corpus RAG para ingest: pasta `rag/` (ver `rag/README.md`); helper `rag/ingest_llm.sh`. Projeto: `aiclaudia`.
 
 ## Health checks
 

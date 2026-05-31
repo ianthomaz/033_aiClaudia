@@ -47,7 +47,7 @@ check_required_env() {
         error "Variável DB_PASSWORD não está definida (deploy/config.env ou deploy/env.prod)."
     fi
     if [ -n "${LLM_API_URL:-}" ] && [ -n "${LLM_API_TOKEN:-}" ] && [ -n "${LLM_PROJECT_ID:-}" ]; then
-        success "LLM ITCS configurado (LLM_API_URL + LLM_API_TOKEN + LLM_PROJECT_ID); Gemini/ChatGPT ficam só como fallback."
+        success "LLM ITCS configurado (LLM_API_URL + LLM_API_TOKEN + LLM_PROJECT_ID); Claudia fala só pela tua LLM (llm.webplace.cc), sem Gemini/ChatGPT."
         return 0
     fi
     for var in GEMINI_API_KEY CHATGPT_API_KEY; do
@@ -109,6 +109,7 @@ do_deploy() {
         echo "LLM_API_TOKEN=${LLM_API_TOKEN:-}"
         echo "LLM_PROJECT_ID=${LLM_PROJECT_ID:-}"
         echo "LLM_MODEL_ALIAS=${LLM_MODEL_ALIAS:-smart}"
+        echo "LLM_DISABLE_COMMERCIAL=${LLM_DISABLE_COMMERCIAL:-1}"
         echo "LLM_ASK_TIMEOUT_SECONDS=${LLM_ASK_TIMEOUT_SECONDS:-120}"
         echo "LLM_ASK_POLL_INTERVAL=${LLM_ASK_POLL_INTERVAL:-0.8}"
         echo "NGINX_HOST=${NGINX_HOST:-www.aiclaudia.com.br}"
