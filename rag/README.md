@@ -10,6 +10,8 @@ Markdown sources for **ingest** into the ITCS LLM API (`project_id` e.g. `aiclau
 | `02_voice_and_politics.md` | Political/social voice, inclusive language |
 | `03_prompt_system.md` | Random category instructions + sessions (no code) |
 | `04_metaphors_and_lexicon.md` | Recurring metaphors (cloud, backup, “Cláudia”) |
+| `05_personas.md` | Voice guide for the 25 real `category` modes (aligned to `rndbase_prompts.json`) |
+| `06_examples.md` | Few-shot Q→A per category (style/length anchors) |
 
 ## ai2tcs (portal pessoal — llm.webplace.cc)
 
