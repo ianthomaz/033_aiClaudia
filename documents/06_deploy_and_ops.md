@@ -5,13 +5,13 @@
 | Item | Valor |
 |------|--------|
 | Domínio | aiclaudia.com.br, www.aiclaudia.com.br |
-| Servidor | BikeAnjoVM (Oracle, 136.248.79.126) — SSH: `BikeAnjoVM` |
+| Servidor | itcsVM2 (Oracle, 136.248.79.126) — SSH: `itcsVM2` |
 | Path no servidor | `/home/opc/033_aiClaudia` (rsync; sem git no host) |
 | Frontend (nginx container) | host `:8082` → nginx nativo `:443` |
 | API (Flask container) | host `:5001` → proxy `/api/*` |
 | PostgreSQL | container `aiclaudia_db`, host `:5434` (local dev) |
 
-Nginx nativo no BikeAnjoVM usa fragmento separado `/etc/nginx/conf.d/aiclaudia.conf` (não misturar com deploy BikeAnjo). SSL Let's Encrypt; Cloudflare Proxied.
+Nginx nativo no itcsVM2 usa fragmento separado `/etc/nginx/conf.d/aiclaudia.conf` (não misturar com deploy BikeAnjo). SSL Let's Encrypt; Cloudflare Proxied.
 
 ## Deploy a partir do mini62
 
@@ -48,11 +48,11 @@ Corpus RAG para ingest: pasta `rag/` (ver `rag/README.md`); helper `rag/ingest_l
 ```bash
 curl -sI https://aiclaudia.com.br
 curl -s https://aiclaudia.com.br/api/health
-ssh BikeAnjoVM 'docker ps --filter name=aiclaudia; systemctl is-active nginx'
+ssh itcsVM2 'docker ps --filter name=aiclaudia; systemctl is-active nginx'
 ```
 
 ## Notas
 
-- Build corre no host de deploy (mini62); BikeAnjoVM só corre containers.
+- Build corre no host de deploy (mini62); itcsVM2 só corre containers.
 - `aiclaudia_db` parado em prod não impede respostas se a API não depender do Postgres naquele momento; para sessões/histórico o DB deve estar Up.
-- Certificado SSL expira periodicamente — renovar com certbot no BikeAnjoVM.
+- Certificado SSL expira periodicamente — renovar com certbot no itcsVM2.

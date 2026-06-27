@@ -2,7 +2,7 @@
 
 ## Arquitetura
 
-Docker Compose com três serviços: frontend (nginx estático), API Flask, PostgreSQL. Em produção, nginx **nativo** no BikeAnjoVM faz TLS e proxy para os containers.
+Docker Compose com três serviços: frontend (nginx estático), API Flask, PostgreSQL. Em produção, nginx **nativo** no itcsVM2 faz TLS e proxy para os containers.
 
 ## Estrutura de pastas
 
@@ -27,7 +27,7 @@ Docker Compose com três serviços: frontend (nginx estático), API Flask, Postg
 
 ## Portas (local / prod host)
 
-| Serviço | Local | Prod (BikeAnjoVM host) |
+| Serviço | Local | Prod (itcsVM2 host) |
 |---------|-------|-------------------------|
 | Frontend nginx | 8082 | 8082 → nginx :443 |
 | API Flask | 5001 | 5001 |
@@ -64,7 +64,7 @@ Tabelas principais: `requests`, `rndbase`, `rate_limits`, `sessions`, `ai_helper
 ## Exposição pública
 
 - Domínio: aiclaudia.com.br (Cloudflare Proxied).
-- Origem: BikeAnjoVM, nginx nativo + containers.
+- Origem: itcsVM2, nginx nativo + containers.
 - Deploy: `./start_aiclaudia.sh deploy` — detalhes em `documents/06_deploy_and_ops.md`.
 
 ## Scripts

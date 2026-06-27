@@ -8,7 +8,7 @@
 - [x] Rate limiting frontend e backend
 - [x] Banco de dados PostgreSQL
 - [x] API Flask com endpoints funcionais
-- [x] Exposição pública (nginx + Cloudflare em aiclaudia.com.br, BikeAnjoVM)
+- [x] Exposição pública (nginx + Cloudflare em aiclaudia.com.br, itcsVM2)
 - [x] Sistema de logs e histórico
 - [x] Design responsivo com Bootstrap
 - [x] Sessões persistentes com personalidade fixa (`documents/03_sessions_system.md`)

@@ -18,7 +18,7 @@ Site público: **https://aiclaudia.com.br**
 | `documents/01_structure.md` | Arquitetura, portas, API, prompts |
 | `documents/02_roadmap.md` | Roadmap |
 | `documents/03_sessions_system.md` | Sessões e contexto |
-| `documents/06_deploy_and_ops.md` | Deploy prod (BikeAnjoVM) e local |
+| `documents/06_deploy_and_ops.md` | Deploy prod (itcsVM2) e local |
 | `rag/README.md` | Corpus para ingest ai2tcs |
 
 ## Quick start (local)
@@ -38,7 +38,7 @@ cp deploy/env.prod.example deploy/env.prod
 ./start_aiclaudia.sh deploy
 ```
 
-Servidor: BikeAnjoVM (`/home/opc/033_aiClaudia`). Ver `documents/06_deploy_and_ops.md`.
+Servidor: itcsVM2 (`/home/opc/033_aiClaudia`). Ver `documents/06_deploy_and_ops.md`.
 
 ## Repositório
 
