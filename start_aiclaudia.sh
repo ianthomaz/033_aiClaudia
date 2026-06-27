@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# aiClaudia - Start (local) ou Deploy (via SSH para BikeAnjoVM)
+# aiClaudia - Start (local) ou Deploy (via SSH para itcsVM2)
 # Uso:
 #   ./start_aiclaudia.sh           # inicia local (deploy/config.env ou deploy/env.prod)
 #   ./start_aiclaudia.sh deploy   # deploy remoto: sync, config, nginx, ingest RAG, start no servidor
@@ -182,6 +182,13 @@ do_start() {
         error "PostgreSQL não está respondendo."
     fi
     success "PostgreSQL OK."
+
+    log "Carregando prompts rndbase (personas)..."
+    if docker exec aiclaudia_api python3 /app/deploy/load_rndbase.py; then
+        success "rndbase carregado."
+    else
+        warning "load_rndbase falhou (personas podem estar vazias)."
+    fi
 
     response=$(curl -s -X POST "http://localhost:${API_HOST_PORT}/api/process-message" -H "Content-Type: application/json" -d '{"user_message": "teste"}' 2>/dev/null)
     if ! echo "$response" | grep -q "success\|error"; then

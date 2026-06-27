@@ -297,20 +297,13 @@ def get_session_prompt(session_id, user_ip):
                 conn.close()
 
                 if row:
-                    # Adicionar contexto da conversa
-                    context_str = ""
-                    if session['message_history']:
-                        context_str = "\n\nContexto da conversa anterior:\n"
-                        for msg in session['message_history'][-2:]:  # últimas 2 trocas no system prompt
-                            context_str += f"Usuário: {msg['user']}\n"
-                            context_str += f"Você: {msg['assistant']}\n"
-
+                    # Conversation context is sent via history in call_itcs_llm_api — not duplicated here.
                     return (
                         session_id,
                         {
                             'category': row[0],
                             'content': row[1],
-                            'full_prompt': f"{CORE_VOICE_PREFIX}\n\n{row[1]}{context_str}"
+                            'full_prompt': f"{CORE_VOICE_PREFIX}\n\n{row[1]}"
                         },
                         False  # não é nova sessão
                     )
