@@ -4,7 +4,7 @@
 # Uso:
 #   ./start_aiclaudia.sh           # inicia local (deploy/config.env ou deploy/env.prod)
 #   ./start_aiclaudia.sh deploy   # deploy remoto: sync, config, nginx, ingest RAG, start no servidor
-#   ./start_aiclaudia.sh ingest   # só atualiza o corpus RAG no portal (llm.webplace.cc)
+#   ./start_aiclaudia.sh refresh-chips  # seed + gera chips a partir de RSS/notícias
 
 set -e
 
@@ -56,6 +56,36 @@ check_required_env() {
             error "Variável $var não está definida. Ou defina ITCS (LLM_API_URL, LLM_API_TOKEN, LLM_PROJECT_ID) ou as chaves comerciais."
         fi
     done
+}
+
+# ---------- Suggestion chips (RSS + LLM) ----------
+bootstrap_suggestion_chips() {
+    log "Suggestion chips (schema + seed)..."
+    if docker exec \
+        -e DB_HOST=database -e DB_PORT=5432 \
+        -e DB_NAME="${DB_NAME:-aiclaudia}" -e DB_USER="${DB_USER:-aiclaudia}" \
+        -e DB_PASSWORD="${DB_PASSWORD}" \
+        aiclaudia_api python3 /app/deploy/seed_suggestion_chips.py 2>/dev/null; then
+        success "Suggestion chips seed OK."
+    else
+        warning "Suggestion chips seed falhou (endpoint usa fallback)."
+    fi
+}
+
+do_refresh_chips() {
+    log "Modo REFRESH-CHIPS: RSS + LLM + pool..."
+    if ! load_env; then
+        error "Nenhum de: deploy/config.env ou deploy/env.prod encontrado."
+    fi
+    check_required_env
+    export DB_HOST="${DB_HOST:-localhost}"
+    export DB_PORT="${DB_PORT:-5434}"
+    if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx aiclaudia_api; then
+        warning "Stack não está up; subindo containers primeiro..."
+        do_start
+    fi
+    bash scripts/refresh_suggestion_chips.sh
+    success "refresh-chips concluído."
 }
 
 # ---------- RAG ingest (LLM pessoal) ----------
@@ -141,11 +171,12 @@ do_deploy() {
     ssh $SSH_OPTS "$SSH_TARGET" "sudo mv /tmp/aiclaudia.conf /etc/nginx/conf.d/aiclaudia.conf && sudo chown root:root /etc/nginx/conf.d/aiclaudia.conf && sudo chmod 644 /etc/nginx/conf.d/aiclaudia.conf && (sudo restorecon /etc/nginx/conf.d/aiclaudia.conf 2>/dev/null || sudo chcon -t httpd_config_t /etc/nginx/conf.d/aiclaudia.conf 2>/dev/null) && sudo nginx -t && sudo systemctl reload nginx" || warning "Nginx reload falhou (confira /etc/nginx/conf.d/aiclaudia.conf no servidor)."
     success "Nginx atualizado (arquivo aiclaudia.conf não é alterado pelo deploy BikeAnjo)."
 
-    # Atualiza o RAG no portal antes de subir a app (endpoint público; corre do host de deploy).
-    ingest_rag
+    # RAG ingest is explicit: ./start_aiclaudia.sh ingest (rag_mode disabled for aiclaudia).
 
     log "Iniciando aiClaudia no servidor..."
     ssh $SSH_OPTS "$SSH_TARGET" "cd ${DEPLOY_REMOTE_PATH} && ./start_aiclaudia.sh" || error "Falha ao rodar start no servidor."
+    log "Atualizando suggestion chips no servidor (RSS + LLM)..."
+    ssh $SSH_OPTS "$SSH_TARGET" "cd ${DEPLOY_REMOTE_PATH} && ./start_aiclaudia.sh refresh-chips" || warning "refresh-chips no servidor falhou (chips seed/fallback)."
     success "Deploy concluído."
 }
 
@@ -190,6 +221,14 @@ do_start() {
         warning "load_rndbase falhou (personas podem estar vazias)."
     fi
 
+    bootstrap_suggestion_chips
+
+    if ! curl -s -f "http://localhost:${API_HOST_PORT}/api/suggestions" > /dev/null; then
+        warning "GET /api/suggestions não respondeu (frontend usa fallback)."
+    else
+        success "GET /api/suggestions OK."
+    fi
+
     response=$(curl -s -X POST "http://localhost:${API_HOST_PORT}/api/process-message" -H "Content-Type: application/json" -d '{"user_message": "teste"}' 2>/dev/null)
     if ! echo "$response" | grep -q "success\|error"; then
         warning "Endpoint /api/process-message inesperado: $response"
@@ -208,6 +247,7 @@ do_start() {
 # ---------- Main ----------
 case "${1:-}" in
     deploy) do_deploy ;;
+    refresh-chips) do_refresh_chips ;;
     ingest)
         # Só atualiza o RAG no portal (sem subir containers). Ex.: ./start_aiclaudia.sh ingest
         if ! load_env; then

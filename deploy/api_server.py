@@ -4,7 +4,7 @@
 Servidor Flask para receber chamadas do frontend
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import os
 import sys
@@ -15,6 +15,7 @@ sys.path.append('/app/deploy')
 
 # Importar as funções do backend
 from simple_prompt_selector import process_user_message, log_frontend_block
+from chip_suggestions import pick_suggestion_chips
 import psycopg2
 
 app = Flask(__name__)
@@ -179,6 +180,33 @@ def get_messages():
             'message': 'Erro ao buscar mensagens do banco'
         }), 500
 
+@app.route('/api/suggestions', methods=['GET'])
+def get_suggestions():
+    """Return 4 active chips from pool (mixed topics when possible)."""
+    try:
+        chips, pool_size, generated_at = pick_suggestion_chips(4)
+        body = {
+            'success': True,
+            'chips': chips,
+            'pool_size': pool_size,
+            'generated_at': generated_at,
+        }
+        resp = make_response(jsonify(body))
+        resp.headers['Cache-Control'] = 'public, max-age=300'
+        return resp
+    except Exception as e:
+        print(f"❌ Erro ao buscar suggestions: {e}")
+        return jsonify({
+            'success': False,
+            'chips': [
+                'Onde foi parar minha chave?',
+                'Me dá um conselho de vida',
+                'Como vai ser meu dia?',
+                'Por que eu esqueço as senhas?',
+            ],
+            'pool_size': 0,
+        })
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """
@@ -201,6 +229,7 @@ def root():
         'endpoints': [
             'POST /api/process-message',
             'POST /api/log-block',
+            'GET /api/suggestions',
             'GET /api/msgs',
             'GET /api/health'
         ]
@@ -219,7 +248,7 @@ if __name__ == '__main__':
     print(f"📡 Endpoints disponíveis:")
     print(f"   POST /api/process-message")
     print(f"   POST /api/log-block")
-    print(f"   GET /api/msgs")
+    print(f"   GET /api/suggestions")
     print(f"   GET /api/health")
     
     app.run(host='0.0.0.0', port=port, debug=debug)

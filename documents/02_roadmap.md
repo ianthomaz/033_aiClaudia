@@ -14,6 +14,7 @@
 - [x] Sessões persistentes com personalidade fixa (`documents/03_sessions_system.md`)
 - [x] Deploy automatizado via `start_aiclaudia.sh deploy`
 - [x] Integração opcional ITCS LLM (ai2tcs) + corpus RAG (`rag/`)
+- [x] Logo webplace no rodapé com link rastreável (`?origin=aiclaudia` + evento `outbound_click` no GA4)
 
 ## Próximas Funcionalidades
 
@@ -26,7 +27,7 @@
 ### 2. Texto de Termo de Uso / Política de Privacidade
 - [ ] Criar página de termos de uso
 - [ ] Elaborar política de privacidade
-- [ ] Adicionar links no footer
+- [ ] Adicionar links no footer (logo webplace feito; termos/privacidade pendentes)
 - [ ] Implementar aceite de termos
 
 ### 3. Colocar Imagens nas Respostas

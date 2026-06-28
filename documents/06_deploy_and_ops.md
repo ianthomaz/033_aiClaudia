@@ -41,7 +41,24 @@ Claudia fala **só** pela LLM pessoal: `LLM_API_URL=https://llm.webplace.cc`, `L
 
 Health do portal: `curl -s https://llm.webplace.cc/health`.
 
-Corpus RAG para ingest: pasta `rag/` (ver `rag/README.md`); helper `rag/ingest_llm.sh`. Projeto: `aiclaudia`.
+Corpus opcional: pasta `rag/` (ver `rag/README.md`). Projeto ai2tcs: `prompt_profile: creative`, `rag_mode: disabled`, `behavior_instruction_path: instrucoes-llm.md`.
+
+## Calibração Claudia
+
+| Item | Valor recomendado |
+|------|-------------------|
+| `LLM_MODEL_ALIAS` | `smart` (default); saudações curtas usam `fast` no código |
+| `rag_mode` (ai2tcs DB) | `disabled` |
+| Seed | `python3 llm_api/scripts/seed_aiclaudia.py` |
+| Eval | `python3 llm_api/scripts/eval_rag.py --project aiclaudia` |
+| Ingest vector | Só se reativar RAG: `./start_aiclaudia.sh ingest` |
+
+Checklist após mudanças de prompt/RAG:
+
+1. Re-seed ai2tcs e confirmar `rag_mode: disabled` no dashboard ou via SQL.
+2. Reiniciar stack local: `./start_aiclaudia.sh`
+3. Eval verde no projeto `aiclaudia`.
+4. Smoke: resposta sem meta-texto (`Voz aiClaudia`, `Com base no contexto`).
 
 ## Health checks
 
@@ -50,6 +67,34 @@ curl -sI https://aiclaudia.com.br
 curl -s https://aiclaudia.com.br/api/health
 ssh itcsVM2 'docker ps --filter name=aiclaudia; systemctl is-active nginx'
 ```
+
+## Footer — link webplace + tracking `origin`
+
+Rodapé do site aponta para `https://webplace.cc/?origin=aiclaudia`. Cliques disparam `outbound_click` no GA4 do aiClaudia (`G-0SSHXB16EN`).
+
+No webplace.cc, `analytics.js` lê `?origin=` e envia evento `inbound_origin` + `campaign_source` no GA4 (`G-SJMKHC5H5C`). Fonte: repo `ianthomaz/webplace_mainSite` → pasta `webplace_Apex/`.
+
+**GA4 Admin (webplace, one-time):** Admin → Custom definitions → Create custom dimension → Scope: Event → Parameter name: `origin`. Sem isso o parâmetro chega nos eventos mas demora a aparecer nos relatórios (~24h).
+
+Após deploy de `analytics.js`, purgar cache Cloudflare do arquivo `/analytics.js` se a CDN servir versão antiga.
+
+## Suggestion chips (notícias + cron)
+
+Pool de perguntas nos chips do chat. Feeds em [`deploy/news_feeds.json`](../deploy/news_feeds.json) (internacional, política, moda, artes, esporte, dança, teatro, música, ciência, sociedade).
+
+| Comando | Efeito |
+|---------|--------|
+| `./start_aiclaudia.sh` | Sobe stack + seed se pool pequeno |
+| `./start_aiclaudia.sh refresh-chips` | 2× LLM (5+5 chips) + local fill se faltar + desativa chips >3 meses (soft) |
+| `GET /api/suggestions` | 4 chips aleatórios ativos (mix de tópicos) |
+
+Cron no Mac (2x/semana, segunda e quinta 6h):
+
+```cron
+0 6 * * 1,4 cd /Users/ianthomaz/Documents/projects/033_aiClaudia && ./scripts/refresh_suggestion_chips.sh >> /tmp/aiclaudia-chips.log 2>&1
+```
+
+Chips com mais de 3 meses ficam `is_active = FALSE` (nunca deletados). Editar feeds: `deploy/news_feeds.json` sem mudar código.
 
 ## Notas
 

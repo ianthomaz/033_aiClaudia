@@ -5,6 +5,8 @@ const RATE_LIMIT_KEY = 'aiclaudia_rate_limit';
 const MAX_REQUESTS = 3;
 const WINDOW_MINUTES = 3;
 const SESSION_KEY = 'aiclaudia_session_id';
+const WEBPLACE_ORIGIN = 'aiclaudia';
+const WEBPLACE_URL = `https://webplace.cc/?origin=${WEBPLACE_ORIGIN}`;
 
 const PLACEHOLDERS = [
     "Pergunta qualquer coisa pra nuvem…",
@@ -14,7 +16,7 @@ const PLACEHOLDERS = [
     "Fala comigo, eu guardo (quase) tudo."
 ];
 
-const SUGGESTIONS = [
+const SUGGESTIONS_FALLBACK = [
     "Onde foi parar minha chave?",
     "Me dá um conselho de vida",
     "Como vai ser meu dia?",
@@ -100,7 +102,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     renderSuggestions();
     greet();
+    setupWebplaceFooterLink();
 });
+
+async function loadSuggestions() {
+    try {
+        const res = await fetch('/api/suggestions');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.chips) && data.chips.length) {
+            return data.chips;
+        }
+    } catch (err) {
+        console.warn('Suggestions API fallback:', err);
+    }
+    return SUGGESTIONS_FALLBACK;
+}
+
+function setupWebplaceFooterLink() {
+    const link = document.getElementById('webplaceFooterLink');
+    if (!link) return;
+    link.addEventListener('click', () => {
+        if (typeof gtag === 'function') {
+            gtag('event', 'outbound_click', {
+                link_url: WEBPLACE_URL,
+                link_text: 'webplace.cc',
+                origin: WEBPLACE_ORIGIN,
+                destination: 'webplace',
+            });
+        }
+    });
+}
 
 /* ---------- Envio ---------- */
 function sendToClaudia() {
@@ -260,11 +292,12 @@ function greet() {
 }
 
 /* ---------- Sugestões ---------- */
-function renderSuggestions() {
+async function renderSuggestions() {
     const box = document.getElementById('suggestions');
     if (!box) return;
     box.innerHTML = '';
-    SUGGESTIONS.forEach(s => {
+    const chips = await loadSuggestions();
+    chips.forEach(s => {
         const b = document.createElement('button');
         b.className = 'chip';
         b.type = 'button';

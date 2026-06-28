@@ -430,6 +430,23 @@ body {
 .footer-note a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .footer-note a:hover { text-decoration: underline; }
 
+.footer-brand {
+    display: flex;
+    justify-content: center;
+    padding: 0.4rem 1rem 0.8rem;
+}
+.footer-brand a {
+    display: inline-block;
+    opacity: 0.75;
+    transition: opacity 0.2s;
+}
+.footer-brand a:hover { opacity: 1; }
+.footer-brand img {
+    display: block;
+    height: 20px;
+    width: auto;
+}
+
 /* ---------- Alertas ---------- */
 .toast {
     position: fixed;

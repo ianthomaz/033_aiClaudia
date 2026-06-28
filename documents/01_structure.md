@@ -49,7 +49,8 @@ Tabelas principais: `requests`, `rndbase`, `rate_limits`, `sessions`, `ai_helper
 - **Premissa curta** em código (`simple_prompt_selector.py`).
 - **Gênero aleatório** por sessão a partir de `rndbase_prompts.json` / tabela `rndbase`.
 - **Contexto**: últimas mensagens da sessão (JSONB).
-- **RAG longo**: ficheiros em `rag/` ingeridos no ai2tcs (`LLM_PROJECT_ID=aiclaudia`).
+- **Mundo / valores**: `rag/instrucoes-llm.md` via ai2tcs `behavior_instruction_path` (request-time, não vector).
+- **Vector RAG**: desligado (`rag_mode: disabled`); corpus em `rag/` só para ingest opcional futuro.
 
 ## Provedores de IA
 

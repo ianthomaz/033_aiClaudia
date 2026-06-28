@@ -2,23 +2,35 @@
 import json
 import os
 import random
+import re
 import psycopg2
 import requests
 import time
 import uuid
 from datetime import datetime, timedelta
 
-# Short prefix on every reply; long-form world-building is in rag/*.md for ai2tcs ingest.
+# Short rules only; world/values in rag/instrucoes-llm.md (ai2tcs behavior_instruction_path).
 CORE_VOICE_PREFIX = (
-    "Voz aiClaudia (BR): esquerda, humanitarismo, inclusão linguística "
-    "(evita marcar género em papéis sociais sem necessidade). "
-    "Responda DIRECTO à pergunta do usuário em 1–3 frases curtas (máx. ~280 caracteres). "
-    "Humor surreal/leve; sem ódio nem incitação. "
-    "PROIBIDO: meta-texto ('vamos tecer', 'a nuvem significa', listar rótulos do prompt, "
-    "enumerar palavras-chave, explicar o truque cénico). "
-    "Pode usar **negrito** Markdown em no máximo uma expressão. "
-    "Se o RAG trouxer trechos, use-os sem recitar literalmente."
+    "Responda DIRECTO à pergunta em 1–3 frases curtas (máx. ~280 caracteres). "
+    "Humor surreal/leve em pt-BR. Improvise — cada resposta deve soar nova. "
+    "PROIBIDO: meta-texto, listar instruções, citar rótulos do prompt ou repetir frases de exemplo."
 )
+
+_GREETING_RE = (
+    r"^(oi|olá|ola|hey|hi|hello|bom dia|boa tarde|boa noite|tudo bem|td bem|"
+    r"como vai|e aí|e ai|salve|fala)[\s!?.,]*$"
+)
+
+
+def pick_llm_model_alias(user_message: str, force_platform: str | None = None) -> str:
+    """Route short greetings to fast; default smart for persona quality."""
+    if force_platform:
+        return os.getenv("LLM_MODEL_ALIAS", "smart").strip() or "smart"
+    default = (os.getenv("LLM_MODEL_ALIAS") or "smart").strip() or "smart"
+    msg = user_message.strip().lower()
+    if msg and re.match(_GREETING_RE, msg, re.IGNORECASE):
+        return "fast"
+    return default
 
 
 def get_random_prompt():
@@ -496,6 +508,7 @@ def call_itcs_llm_api(
     user_message: str,
     user_id: str | None = None,
     history: list[dict] | None = None,
+    model_alias: str | None = None,
 ):
     """
     Calls the ITCS-webplace LLM HTTP API (ai2tcs llm_api): POST /ask, poll /status, GET /result.
@@ -511,7 +524,7 @@ def call_itcs_llm_api(
             "platform": "itcs",
         }
 
-    model = (os.getenv("LLM_MODEL_ALIAS") or os.getenv("LLM_MODEL") or "fast").strip()
+    model = (model_alias or os.getenv("LLM_MODEL_ALIAS") or os.getenv("LLM_MODEL") or "smart").strip()
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -528,7 +541,7 @@ def call_itcs_llm_api(
         payload["history"] = history
 
     poll_timeout = int(os.getenv("LLM_ASK_TIMEOUT_SECONDS", "90"))
-    poll_interval = float(os.getenv("LLM_ASK_POLL_INTERVAL", "0.35"))
+    poll_interval = float(os.getenv("LLM_ASK_POLL_INTERVAL", "0.2"))
 
     try:
         r = requests.post(f"{base}/ask", headers=headers, json=payload, timeout=60)
@@ -773,10 +786,15 @@ def process_user_message(user_ip, user_message, session_id=None, force_platform=
     platform_used = None
     user_ref = session_id or f"aiclaudia:{user_ip}"
     hist = _history_for_itcs(session_id)
+    model_alias = pick_llm_model_alias(user_message, force_platform)
 
     if force_platform == "itcs":
         ai_result = call_itcs_llm_api(
-            prompt_data["full_prompt"], user_message, user_id=user_ref, history=hist
+            prompt_data["full_prompt"],
+            user_message,
+            user_id=user_ref,
+            history=hist,
+            model_alias=model_alias,
         )
         platform_used = "itcs"
     elif force_platform == "chatgpt":
@@ -801,7 +819,11 @@ def process_user_message(user_ip, user_message, session_id=None, force_platform=
         platform_used = "gemini"
     elif itcs_llm_configured():
         ai_result = call_itcs_llm_api(
-            prompt_data["full_prompt"], user_message, user_id=user_ref, history=hist
+            prompt_data["full_prompt"],
+            user_message,
+            user_id=user_ref,
+            history=hist,
+            model_alias=model_alias,
         )
         platform_used = "itcs"
     elif not commercial_llm_allowed():

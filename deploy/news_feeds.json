@@ -1,0 +1,12 @@
+[
+  { "topic": "international", "url": "https://feeds.bbci.co.uk/news/world/rss.xml", "label": "BBC World" },
+  { "topic": "politics", "url": "https://g1.globo.com/politica/rss2.xml", "label": "G1 Política" },
+  { "topic": "fashion", "url": "https://g1.globo.com/bemestar/rss2.xml", "label": "G1 Bem-estar" },
+  { "topic": "arts", "url": "https://g1.globo.com/pop-arte/rss2.xml", "label": "G1 Pop & Arte" },
+  { "topic": "sports", "url": "https://ge.globo.com/rss/ge/", "label": "GE Esporte" },
+  { "topic": "music", "url": "https://g1.globo.com/musica/rss2.xml", "label": "G1 Música" },
+  { "topic": "theater", "url": "https://g1.globo.com/cinema/rss2.xml", "label": "G1 Cinema" },
+  { "topic": "dance", "url": "https://g1.globo.com/cultura/rss2.xml", "label": "G1 Cultura" },
+  { "topic": "science", "url": "https://g1.globo.com/ciencia/rss2.xml", "label": "G1 Ciência" },
+  { "topic": "society", "url": "https://g1.globo.com/economia/rss2.xml", "label": "G1 Economia" }
+]

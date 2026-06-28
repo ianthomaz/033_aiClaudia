@@ -1,5 +1,8 @@
 # aiClaudia
 
+Hub ITCS: manifest `itcsManifest.yaml` — contrato em 0MM_ITCS `docs/21_project_hub_contract.md`
+
+
 Versão brasileira satírica do iCloud: a Claudia guarda tudo na nuvem e responde com humor surreal e poético.
 
 Site público: **https://aiclaudia.com.br**
